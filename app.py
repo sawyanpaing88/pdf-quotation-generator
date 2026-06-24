@@ -557,7 +557,7 @@ elif page_selection == "➕ Build New Quotation Module":
             conn.commit()
         st.success("Draft archived.")
 
-    if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
+   if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
         html_table_rows = ""
         for item in st.session_state.working_items:
             row_class = "class='sub-row'" if item.get("is_sub", False) else ""
@@ -576,30 +576,27 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td>{item.get('Part Number/Model') or ''}</td>
                 <td>{indent_prefix}{item.get('Description') or ''}</td>
                 <td style="text-align: center;">{int(qty)}</td>
-                <td style="text-align: right;">{currency_symbol}{converted_unit_price:,.2f}</td>
-                <td style="text-align: right; font-weight: bold;">{currency_symbol}{converted_total_price:,.2f}</td>
+                <td class="num-cell">{currency_symbol}{converted_unit_price:,.2f}</td>
+                <td class="num-cell" style="font-weight: bold;">{currency_symbol}{converted_total_price:,.2f}</td>
             </tr>
             """
             
         if ps_price_usd > 0:
             ps_conv = ps_price_usd * conversion_multiplier
-            html_table_rows += f"<tr><td style='text-align:center;'>-</td><td>PS-SERVICE</td><td>{ps_desc}</td><td style='text-align:center;'>1</td><td style='text-align:right;'>{currency_symbol}{ps_conv:,.2f}</td><td style='text-align:right;font-weight:bold;'>{currency_symbol}{ps_conv:,.2f}</td></tr>"
+            html_table_rows += f"<tr><td style='text-align:center;'>-</td><td>PS-SERVICE</td><td>{ps_desc}</td><td style='text-align:center;'>1</td><td class='num-cell'>{currency_symbol}{ps_conv:,.2f}</td><td class='num-cell' style='font-weight:bold;'>{currency_symbol}{ps_conv:,.2f}</td></tr>"
         if ms_price_usd > 0:
             ms_conv = ms_price_usd * conversion_multiplier
-            html_table_rows += f"<tr><td style='text-align:center;'>-</td><td>MS-SERVICE</td><td>{ms_desc}</td><td style='text-align:center;'>1</td><td style='text-align:right;'>{currency_symbol}{ms_conv:,.2f}</td><td style='text-align:right;font-weight:bold;'>{currency_symbol}{ms_conv:,.2f}</td></tr>"
+            html_table_rows += f"<tr><td style='text-align:center;'>-</td><td>MS-SERVICE</td><td>{ms_desc}</td><td style='text-align:center;'>1</td><td class='num-cell'>{currency_symbol}{ms_conv:,.2f}</td><td class='num-cell' style='font-weight:bold;'>{currency_symbol}{ms_conv:,.2f}</td></tr>"
 
         exchange_rate_notice = f"<div style='font-size:8.5pt; color:#4b5563; margin-bottom:12px;'>🌐 <strong>Conversion Profile:</strong> 1 USD = {exchange_rate:,.2f} MMK</div>" if currency_selection == "MMK" else ""
 
-        # ==========================================
-        # 🖨️ ANTI-TRUNCATION CSS PRINT ENGINE
-        # ==========================================
         full_printable_html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
             <style>
-                @page {{ size: A4; margin: 15mm 10mm 15mm 10mm; }}
+                @page {{ size: A4; margin: 15mm 12mm 15mm 12mm; }}
                 body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #1f2937; font-size: 9pt; line-height: 1.5; }}
                 
                 .brand-header {{ width: 100%; margin-bottom: 15px; }}
@@ -613,24 +610,25 @@ elif page_selection == "➕ Build New Quotation Module":
                 .meta-table {{ width: 100%; margin-bottom: 25px; border-collapse: collapse; }}
                 .meta-table td {{ border: 1px solid #e5e7eb; padding: 10px; vertical-align: top; width: 50%; background-color: #fafafa; }}
                 
-                /* Layout Parameters to Ensure Full Content Width Rendering */
+                /* Anti-Truncation Layout Architecture */
                 .items-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; page-break-inside: auto; }}
                 .items-table tr {{ page-break-inside: avoid; page-break-after: auto; }}
-                .items-table th {{ background-color: #1f2937; color: white; padding: 10px 6px; font-size: 9pt; text-transform: uppercase; border: 1px solid #1f2937; font-weight: bold; }}
-                .items-table td {{ border: 1px solid #e5e7eb; padding: 8px 6px; vertical-align: top; font-size: 8.5pt; word-wrap: break-word; overflow: visible; }}
+                .items-table th {{ background-color: #1f2937; color: white; padding: 10px 4px; font-size: 9pt; text-transform: uppercase; border: 1px solid #1f2937; font-weight: bold; }}
+                .items-table td {{ border: 1px solid #e5e7eb; padding: 8px 4px; vertical-align: top; font-size: 8.5pt; word-wrap: break-word; overflow: visible; }}
                 
-                /* Precise Layout Widths Permitting Large Number Pools */
-                .col-no {{ width: 6%; }}
-                .col-part {{ width: 20%; }}
+                /* Optimized column spacing allocation for handling large numbers */
+                .col-no {{ width: 5%; }}
+                .col-part {{ width: 18%; }}
                 .col-desc {{ width: 32%; }}
-                .col-qty {{ width: 7%; }}
-                .col-uprice {{ width: 17%; }}
-                .col-tprice {{ width: 18%; }}
+                .col-qty {{ width: 5%; }}
+                .col-uprice {{ width: 18%; }}
+                .col-tprice {{ width: 22%; }} /* Expanded column padding room */
                 
+                .num-cell {{ text-align: right; white-space: nowrap; }}
                 .sub-row td {{ background-color: #f9fafb; color: #4b5563; font-style: italic; }}
                 
                 .totals-container {{ width: 100%; margin-top: 25px; display: block; }}
-                .totals-table {{ width: 48%; margin-left: auto; border-collapse: collapse; }}
+                .totals-table {{ width: 50%; margin-left: auto; border-collapse: collapse; }}
                 .totals-table td {{ padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 9pt; }}
                 .grand-total-row {{ background-color: #00a8e8; color: white; font-weight: bold; }}
                 .grand-total-row td {{ border: none; }}
