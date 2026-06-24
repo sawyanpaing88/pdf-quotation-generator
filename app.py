@@ -594,7 +594,7 @@ if page_selection == "➕ Build New Quotation Module":
             conn.commit()
         st.success(f"Quotation layout successfully archived locally as Draft reference hash `{quotation_auto_gen}`")
 
-    if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
+  if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
         html_table_rows = ""
         for idx, r in edited_items_df.iterrows():
             is_sub_row = str(r.get("Parent No", "")).strip() != ""
@@ -643,7 +643,8 @@ if page_selection == "➕ Build New Quotation Module":
                 .meta-table {{ width: 100%; margin-bottom: 20px; border-collapse: collapse; }}
                 .meta-table td {{ border: 1px solid #e5e7eb; padding: 8px; vertical-align: top; width: 50%; }}
                 
-                .items-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }}
+                /* CHANGED: table-layout changed to auto to prevent cutting text off */
+                .items-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: auto; }}
                 .items-table th {{ background-color: #1f2937; color: white; padding: 8px; font-size: 8.5pt; text-transform: uppercase; border: 1px solid #1f2937; }}
                 .items-table td {{ 
                     border: 1px solid #e5e7eb; 
@@ -653,13 +654,15 @@ if page_selection == "➕ Build New Quotation Module":
                     overflow: visible;
                 }}
                 
-                /* Refined Layout Percentages - Shrunk Description Column */
-                .col-no {{ width: 8%; }}
-                .col-part {{ width: 20%; }}
+                /* Set explicit control widths ONLY on small structural elements */
+                .col-no {{ width: 6%; }}
+                .col-qty {{ width: 5%; }}
+                .col-part {{ width: 18%; }}
                 .col-desc {{ width: 30%; }}
-                .col-qty {{ width: 6%; }}
-                .col-uprice {{ width: 16%; }}
-                .col-tprice {{ width: 20%; }}
+                
+                /* Leave price widths auto-adjustable so long MMK strings never wrap or truncate */
+                .col-uprice {{ width: auto; text-align: right; }}
+                .col-tprice {{ width: auto; text-align: right; }}
                 
                 .sub-row td {{
                     background-color: #f9fafb;
