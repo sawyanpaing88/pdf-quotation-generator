@@ -498,7 +498,8 @@ if page_selection == "➕ Build New Quotation Module":
             "Unit Price": st.column_config.NumberColumn("Unit Cost Price (Base USD)", format="$%.2f"),
             "Margin %": st.column_config.NumberColumn("Margin per Line (%)"),
             "Display Unit Price": st.column_config.NumberColumn(f"Final Unit Price ({currency_selection})", format=f"{currency_symbol}%.2f" if currency_selection=="USD" else "Ks %.2f", disabled=True),
-            "Final Price": st.column_config.TextColumn("Final Price", width="collapsed")
+            "Final Price": st.column_config.NumberColumn("Final Price", width="collapsed", disabled=True) # Changed to NumberColumn and disabled=True
+     
         }
     )
     
