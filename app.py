@@ -557,7 +557,10 @@ elif page_selection == "➕ Build New Quotation Module":
             conn.commit()
         st.success("Draft archived.")
 
-   if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
+  # ==========================================
+    # 🖨️ FIXED INDENTATION: PDF ENGINE ASSET
+    # ==========================================
+    if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
         html_table_rows = ""
         for item in st.session_state.working_items:
             row_class = "class='sub-row'" if item.get("is_sub", False) else ""
@@ -610,19 +613,17 @@ elif page_selection == "➕ Build New Quotation Module":
                 .meta-table {{ width: 100%; margin-bottom: 25px; border-collapse: collapse; }}
                 .meta-table td {{ border: 1px solid #e5e7eb; padding: 10px; vertical-align: top; width: 50%; background-color: #fafafa; }}
                 
-                /* Anti-Truncation Layout Architecture */
                 .items-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; page-break-inside: auto; }}
                 .items-table tr {{ page-break-inside: avoid; page-break-after: auto; }}
                 .items-table th {{ background-color: #1f2937; color: white; padding: 10px 4px; font-size: 9pt; text-transform: uppercase; border: 1px solid #1f2937; font-weight: bold; }}
                 .items-table td {{ border: 1px solid #e5e7eb; padding: 8px 4px; vertical-align: top; font-size: 8.5pt; word-wrap: break-word; overflow: visible; }}
                 
-                /* Optimized column spacing allocation for handling large numbers */
                 .col-no {{ width: 5%; }}
                 .col-part {{ width: 18%; }}
                 .col-desc {{ width: 32%; }}
                 .col-qty {{ width: 5%; }}
                 .col-uprice {{ width: 18%; }}
-                .col-tprice {{ width: 22%; }} /* Expanded column padding room */
+                .col-tprice {{ width: 22%; }}
                 
                 .num-cell {{ text-align: right; white-space: nowrap; }}
                 .sub-row td {{ background-color: #f9fafb; color: #4b5563; font-style: italic; }}
