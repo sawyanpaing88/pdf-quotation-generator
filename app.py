@@ -1250,7 +1250,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 page-break-inside: avoid;
             }}
             .signatory-container {{ width: 45%; }}
-            .totals-container {{ width: 45%; }}
+           
         </style>
         ...
         <body>
