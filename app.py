@@ -705,8 +705,7 @@ elif page_selection == "➕ Build New Quotation Module":
             st.session_state.working_items.append({
                 "No": next_no, "is_sub": False, "parent_idx": next_no, 
                 "Part Number": "", "Description": "NEW STRUCTURAL BLOCK HEADER", 
-                "Qty": None, \"Unit Price\": None, \"Margin\": None, \"Total Price\": None
-            })
+                "Unit Price": None, "Margin": None, "Total Price": None            })
             st.rerun()
     with btn_c2:
         if st.button("🌿 Add Sub-Row Element"):
