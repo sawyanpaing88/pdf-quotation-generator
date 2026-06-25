@@ -13,11 +13,9 @@ try:
     from weasyprint import HTML
 except ImportError:
     class HTML:
-        def __init__(self, string, **kwargs): 
-            self.string = string
+        def __init__(self, string, **kwargs): self.string = string
         def write_pdf(self, target, **kwargs):
-            with open(target, "wb") as f: 
-                f.write(b"%PDF-1.4 Mock PDF Output Content")
+            with open(target, "wb") as f: f.write(b"%PDF-1.4 Mock PDF Output Content")
 
 from pypdf import PdfReader
 
@@ -95,7 +93,6 @@ def init_db():
                 currency_unit TEXT,
                 exchange_rate REAL,
                 items_json TEXT,
-                extended_meta_json TEXT DEFAULT '{}',
                 FOREIGN KEY(creator_id) REFERENCES users(id)
             )
         """)
@@ -127,6 +124,41 @@ def init_db():
         conn.commit()
 
 init_db()
+
+# --- UNIFIED WORKSPACE STATES DEFAULT FACTORY ---
+sandbox_defaults = {
+    "sb_client_company": "Acme Enterprise Corp",
+    "sb_attn_person": "John Doe",
+    "sb_attn_email": "johndoe@client.com",
+    "sb_attn_phone": "+959xxxxxxxxx",
+    "sb_project_title": "Network Infrastructure Overhaul",
+    "sb_issue_date": datetime.today().date(),
+    "sb_validity_bound": "30 Days from issuance",
+    "sb_lead_time_frame": "4-6 Weeks",
+    "sb_payment_terms_desc": "50% Advance, 50% Upon Delivery",
+    "sb_terms_and_cond": "1. Standard Vendor Warranty applies.\n2. Prices exclude deployment unless itemized below.",
+    "sb_currency_selection": "USD",
+    "sb_exchange_rate": 3250.0,
+    "sb_ps_desc": "ARK Implementation Support",
+    "sb_ps_price": 0.0,
+    "sb_ms_desc": "ARK Premium 24/7 Monitoring",
+    "sb_ms_price": 0.0,
+    "sb_ps_ms_currency": "USD",
+    "sb_enable_commercial_tax": True,
+    "sb_commercial_tax_pct": 5.0,
+    "sb_enable_wht": False,
+    "sb_wht_calc_type": "Percentage (%)",
+    "sb_wht_value_input": 2.0,
+    "sb_global_discount_input": 0.0,
+    "working_items": [
+        {"No": "1", "is_sub": False, "parent_idx": "1", "Part Number": "", "Description": "Cisco Routing Core Platform Matrix", "Qty": 0, "Unit Price": 4500.0, "Margin": 0.0, "Total Price": 0.0},
+        {"No": "1.1", "is_sub": True, "parent_idx": "1", "Part Number": "C9300-48TX-E", "Description": "Catalyst 9300 48-port Data Only Network Essentials", "Qty": 1, "Unit Price": 4500.0, "Margin": 10.0, "Total Price": 0.0},
+        {"No": "1.2", "is_sub": True, "parent_idx": "1", "Part Number": "STACK-M-50CM", "Description": "Cisco Catalyst 9300 Stack Cable 50CM", "Qty": 1, "Unit Price": 250.0, "Margin": 10.0, "Total Price": 0.0}
+    ]
+}
+for key, def_val in sandbox_defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = def_val
 
 def hash_pwd(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -456,14 +488,52 @@ elif page_selection == "🏠 Dashboard Console":
                     
                     if st.button("🔄 Load Draft back to Sandbox Workspace", key=f"reload_draft_{row['id']}"):
                         try:
+                            # Restore general text inputs
+                            st.session_state.sb_client_company = row['customer_name']
+                            st.session_state.sb_project_title = row['project_name']
+                            st.session_state.sb_attn_person = row['attention_person']
+                            st.session_state.sb_attn_email = row['attention_email']
+                            st.session_state.sb_attn_phone = row['attention_phone']
+                            
+                            try:
+                                st.session_state.sb_issue_date = datetime.strptime(row['issue_date'], "%Y-%m-%d").date()
+                            except:
+                                st.session_state.sb_issue_date = datetime.today().date()
+                                
+                            st.session_state.sb_validity_bound = row['validity']
+                            st.session_state.sb_lead_time_frame = row['lead_time']
+                            st.session_state.sb_payment_terms_desc = row['payment_term']
+                            st.session_state.sb_terms_and_cond = row['terms_conditions']
+                            st.session_state.sb_currency_selection = row['currency_unit']
+                            st.session_state.sb_exchange_rate = float(row['exchange_rate'] or 3250.0)
+                            
+                            # Reload active list layout items
                             st.session_state.working_items = json.loads(row['items_json'])
-                            if row['extended_meta_json']:
-                                ext_meta = json.loads(row['extended_meta_json'])
-                                for key, val in ext_meta.items():
-                                    st.session_state[f"loaded_{key}"] = val
-                            st.success("Configuration loaded back to your working workspace! Navigate to 'Build New Quotation Module' tab.")
+                            
+                            # Parse extended metadata payload object structure
+                            ext_meta = {}
+                            if "extended_meta_json" in row.keys() and row["extended_meta_json"]:
+                                try:
+                                    ext_meta = json.loads(row["extended_meta_json"])
+                                except:
+                                    pass
+                            
+                            st.session_state.sb_ps_desc = ext_meta.get("ps_desc", "ARK Implementation Support")
+                            st.session_state.sb_ps_price = float(ext_meta.get("ps_price", 0.0))
+                            st.session_state.sb_ms_desc = ext_meta.get("ms_desc", "ARK Premium 24/7 Monitoring")
+                            st.session_state.sb_ms_price = float(ext_meta.get("ms_price", 0.0))
+                            st.session_state.sb_ps_ms_currency = ext_meta.get("ps_ms_currency", "USD")
+                            st.session_state.sb_enable_commercial_tax = bool(ext_meta.get("enable_commercial_tax", True))
+                            st.session_state.sb_commercial_tax_pct = float(ext_meta.get("commercial_tax_pct", 5.0))
+                            st.session_state.sb_enable_wht = bool(ext_meta.get("enable_wht", False))
+                            st.session_state.sb_wht_calc_type = ext_meta.get("wht_calc_type", "Percentage (%)")
+                            st.session_state.sb_wht_value_input = float(ext_meta.get("wht_value_input", 2.0))
+                            st.session_state.sb_global_discount_input = float(ext_meta.get("global_discount_input", 0.0))
+                            
+                            st.success("Complete configuration fields loaded cleanly into active sandbox context! Swap over to 'Build New Quotation Module'.")
+                            st.rerun()
                         except Exception as e:
-                            st.error(f"Failed reloading configuration: {e}")
+                            st.error(f"Failed reloading configuration vectors: {e}")
                             
                     st.write(f"**Attention Party Contact:** {row['attention_person']} ({row['attention_email']})")
                     st.write(f"**Valid Frame:** {row['validity']} | **Payment Terms:** {row['payment_term']}")
@@ -524,8 +594,9 @@ elif page_selection == "➕ Build New Quotation Module":
     
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 💱 Currency Settings")
-    currency_selection = st.sidebar.selectbox("Base Output Currency Mode", ["USD", "MMK"])
-    exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, value=3250.0, step=10.0)
+    
+    currency_selection = st.sidebar.selectbox("Base Output Currency Mode", ["USD", "MMK"], key="sb_currency_selection")
+    exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, step=10.0, key="sb_exchange_rate")
     
     currency_symbol = "USD " if currency_selection == "USD" else "MMK "
     conversion_multiplier = exchange_rate if currency_selection == "MMK" else 1.0
@@ -557,44 +628,33 @@ elif page_selection == "➕ Build New Quotation Module":
     
     meta_c1, meta_c2, meta_c3 = st.columns(3)
     with meta_c1:
-        client_company = st.text_input("Client Corporate Entity Name", "Acme Enterprise Corp")
-        attn_person = st.text_input("Attention Person Point of Contact", "John Doe")
-        attn_email = st.text_input("Contact Email Destination", "johndoe@client.com")
-        attn_phone = st.text_input("Contact Direct Phone Line", "+959xxxxxxxxx")
+        client_company = st.text_input("Client Corporate Entity Name", key="sb_client_company")
+        attn_person = st.text_input("Attention Person Point of Contact", key="sb_attn_person")
+        attn_email = st.text_input("Contact Email Destination", key="sb_attn_email")
+        attn_phone = st.text_input("Contact Direct Phone Line", key="sb_attn_phone")
     with meta_c2:
-        project_title = st.text_input("Internal Assignment / Project Title", "Network Infrastructure Overhaul")
-        issue_date = st.date_input("Official Registration / Issue Date")
-        validity_bound = st.text_input("Quotation Validity Frame", "30 Days from issuance")
+        project_title = st.text_input("Internal Assignment / Project Title", key="sb_project_title")
+        issue_date = st.date_input("Official Registration / Issue Date", key="sb_issue_date")
+        validity_bound = st.text_input("Quotation Validity Frame", key="sb_validity_bound")
     with meta_c3:
-        lead_time_frame = st.text_input("Estimated Equipment Delivery Lead Time", "4-6 Weeks")
-        payment_terms_desc = st.text_input("Agreed Commercial Payment Terms", "50% Advance, 50% Upon Delivery")
-        terms_and_cond = st.text_area("Custom Legal Terms & Conditions Scope", "1. Standard Vendor Warranty applies.\n2. Prices exclude deployment unless itemized below.")
+        lead_time_frame = st.text_input("Estimated Equipment Delivery Lead Time", key="sb_lead_time_frame")
+        payment_terms_desc = st.text_input("Agreed Commercial Payment Terms", key="sb_payment_terms_desc")
+        terms_and_cond = st.text_area("Custom Legal Terms & Conditions Scope", key="sb_terms_and_cond")
 
     st.markdown("---")
     uploaded_doc = st.file_uploader("Ingest Document Vector (.xlsx, .xls, .csv, .pdf supported)", type=["xlsx", "xls", "csv", "pdf"])
     
-    items_list = []
     if uploaded_doc:
         try:
             if uploaded_doc.name.endswith('.pdf'):
-                items_list = parse_pdf_document(uploaded_doc)
+                st.session_state.working_items = parse_pdf_document(uploaded_doc)
             elif uploaded_doc.name.endswith('.csv'):
-                items_list = parse_uploaded_document(pd.read_csv(uploaded_doc, dtype={"No": str}))
+                st.session_state.working_items = parse_uploaded_document(pd.read_csv(uploaded_doc, dtype={"No": str}))
             else:
-                items_list = parse_uploaded_document(pd.read_excel(uploaded_doc, dtype={"No": str}))
-            st.success(f"Mapped {len(items_list)} items lines dynamically.")
+                st.session_state.working_items = parse_uploaded_document(pd.read_excel(uploaded_doc, dtype={"No": str}))
+            st.success(f"Mapped {len(st.session_state.working_items)} items lines dynamically.")
         except Exception as e:
             st.error(f"Ingestion failure: {e}")
-
-    if "working_items" not in st.session_state or uploaded_doc:
-        if items_list:
-            st.session_state.working_items = items_list
-        else:
-            st.session_state.working_items = [
-                {"No": "1", "is_sub": False, "parent_idx": "1", "Part Number": "", "Description": "Cisco Routing Core Platform Matrix", "Qty": 0, "Unit Price": 4500.0, "Margin": 0.0, "Total Price": 0.0},
-                {"No": "1.1", "is_sub": True, "parent_idx": "1", "Part Number": "C9300-48TX-E", "Description": "Catalyst 9300 48-port Data Only Network Essentials", "Qty": 1, "Unit Price": 4500.0, "Margin": 10.0, "Total Price": 0.0},
-                {"No": "1.2", "is_sub": True, "parent_idx": "1", "Part Number": "STACK-M-50CM", "Description": "Cisco Catalyst 9300 Stack Cable 50CM", "Qty": 1, "Unit Price": 250.0, "Margin": 10.0, "Total Price": 0.0}
-            ]
 
     st.markdown("#### ⚡ Global Commercial Adjustments")
     m_col1, m_col2 = st.columns([2, 3])
@@ -626,14 +686,7 @@ elif page_selection == "➕ Build New Quotation Module":
             item["Total Price"] = round((final_unit_price * qty) * conversion_multiplier, 2)
 
     blueprint_columns = ["No", "Part Number", "Description", "Qty", "Unit Price", "Margin", "Total Price"]
-    
-    if st.session_state.working_items:
-        df_display = pd.DataFrame(st.session_state.working_items)
-        for col in blueprint_columns:
-            if col not in df_display.columns:
-                df_display[col] = None
-    else:
-        df_display = pd.DataFrame(columns=blueprint_columns)
+    df_display = pd.DataFrame(st.session_state.working_items) if st.session_state.working_items else pd.DataFrame(columns=blueprint_columns)
 
     edited_df = st.data_editor(
         df_display[blueprint_columns],
@@ -705,7 +758,8 @@ elif page_selection == "➕ Build New Quotation Module":
             st.session_state.working_items.append({
                 "No": next_no, "is_sub": False, "parent_idx": next_no, 
                 "Part Number": "", "Description": "NEW STRUCTURAL BLOCK HEADER", 
-                "Unit Price": None, "Margin": None, "Total Price": None            })
+                "Qty": None, "Unit Price": None, "Margin": None, "Total Price": None
+            })
             st.rerun()
     with btn_c2:
         if st.button("🌿 Add Sub-Row Element"):
@@ -722,103 +776,134 @@ elif page_selection == "➕ Build New Quotation Module":
 
     st.markdown("---")
     
-    # --- SERVICES FUNCTIONAL CURRENCY CONFIGURATION MODULE ---
-    st.markdown("#### 🛠️ Services & Support Custom Configuration")
-    
-    # Retrieve pre-loaded states if they were loaded from dashboard drafts
-    def_srv_curr = st.session_state.get("loaded_services_currency", "USD")
-    def_ps_desc = st.session_state.get("loaded_ps_desc", "ARK Implementation Support")
-    def_ps_price = float(st.session_state.get("loaded_ps_price", 0.0))
-    def_ps_exempt = bool(st.session_state.get("loaded_ps_tax_exempt", False))
-    def_ms_desc = st.session_state.get("loaded_ms_desc", "ARK Premium 24/7 Monitoring")
-    def_ms_price = float(st.session_state.get("loaded_ms_price", 0.0))
-    def_ms_exempt = bool(st.session_state.get("loaded_ms_tax_exempt", False))
-
-    srv_curr_c1, srv_curr_c2 = st.columns([1, 3])
-    with srv_curr_c1:
-        services_currency = st.selectbox("Services Functional Currency Option", ["USD", "MMK"], index=["USD", "MMK"].index(def_srv_curr), key="srv_curr_opt")
-    
-    srv_c1, srv_c2 = st.columns(2)
+    # --- SERVICES INPUT MATRIX WITH CURRENCY MATRIX CONTROL ---
+    srv_c1, srv_c2, srv_c3 = st.columns([3, 3, 2])
     with srv_c1:
-        ps_desc = st.text_area("Professional Service Description", def_ps_desc)
-        ps_price = st.number_input(f"Professional Service Price ({services_currency})", min_value=0.0, value=def_ps_price)
-        ps_tax_exempt = st.checkbox("Exempt Professional Services from Taxes", value=def_ps_exempt, key="ps_exempt_chk")
+        ps_desc = st.text_area("Professional Service Description", key="sb_ps_desc")
+        ps_price = st.number_input("Professional Service Price Value", min_value=0.0, key="sb_ps_price")
     with srv_c2:
-        ms_desc = st.text_area("Maintenance Service Description", def_ms_desc)
-        ms_price = st.number_input(f"Maintenance Service Price ({services_currency})", min_value=0.0, value=def_ms_price)
-        ms_tax_exempt = st.checkbox("Exempt Maintenance Services from Taxes", value=def_ms_exempt, key="ms_exempt_chk")
-
-    # Normalization of service prices back into the master workspace layout currency
-    if services_currency == currency_selection:
-        ps_converted = ps_price
-        ms_converted = ms_price
-    elif services_currency == "USD" and currency_selection == "MMK":
-        ps_converted = ps_price * exchange_rate
-        ms_converted = ms_price * exchange_rate
-    else: # services_currency == "MMK" and currency_selection == "USD"
-        ps_converted = ps_price / exchange_rate if exchange_rate > 0 else ps_price
-        ms_converted = ms_price / exchange_rate if exchange_rate > 0 else ms_price
+        ms_desc = st.text_area("Maintenance Service Description", key="sb_ms_desc")
+        ms_price = st.number_input("Maintenance Service Price Value", min_value=0.0, key="sb_ms_price")
+    with srv_c3:
+        ps_ms_currency = st.selectbox("Services Functional Currency Option", ["USD", "MMK"], key="sb_ps_ms_currency")
 
     # --- SIDEBAR TAX CONFIGURATION SELECTION MAPPING ---
     st.sidebar.markdown("### 🏛️ Tax Strategies")
-    enable_commercial_tax = st.sidebar.checkbox("Apply Commercial Tax", value=True)
+    enable_commercial_tax = st.sidebar.checkbox("Apply Commercial Tax", key="sb_enable_commercial_tax")
     commercial_tax_pct = 5.0
     if enable_commercial_tax:
-        commercial_tax_pct = st.sidebar.number_input("Commercial Tax Factor (%)", min_value=0.0, value=5.0, key="comm_tax_val")
+        commercial_tax_pct = st.sidebar.number_input("Commercial Tax Factor (%)", min_value=0.0, key="sb_commercial_tax_pct")
         
-    enable_wht = st.sidebar.checkbox("Apply Withholding Tax (WHT)", value=False)
-    wht_pct = 2.0
+    enable_wht = st.sidebar.checkbox("Apply Withholding Tax (WHT)", key="sb_enable_wht")
+    wht_calc_type = "Percentage (%)"
+    wht_value_input = 0.0
     if enable_wht:
-        wht_pct = st.sidebar.number_input("Withholding Tax (WHT) Factor (%)", min_value=0.0, value=2.0, key="wht_tax_val")
+        wht_calc_type = st.sidebar.selectbox("WHT Logic Model", ["Percentage (%)", "Absolute Value"], key="sb_wht_calc_type")
+        wht_value_input = st.sidebar.number_input("WHT Tax Input Value", min_value=0.0, key="sb_wht_value_input")
 
-    # --- COMPREHENSIVE TAX MATRICES PIPELINE ENGINE ---
+    global_discount_input = st.sidebar.number_input("Global Discount Value", min_value=0.0, key="sb_global_discount_input")
+
+    # --- DUAL INTEGRATION TAX/CALCULATION ENGINE PIPELINE ---
     item_subtotal_rendered = sum([float(item.get("Total Price") or 0.0) for item in st.session_state.working_items if item.get("Total Price") is not None])
-    global_subtotal_calculated = item_subtotal_rendered + ps_converted + ms_converted
+    dual_currency_flow = (currency_selection == "USD" and ps_ms_currency == "MMK")
     
-    global_discount_input = st.sidebar.number_input(f"Discount ({currency_selection})", min_value=0.0, value=0.0)
-    subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
-    
-    # Calculate relative baseline ratios to allocate discount proportionally across items
-    discount_factor = (subtotal_after_disc / global_subtotal_calculated) if global_subtotal_calculated > 0 else 1.0
-    
-    # Isolate taxable subtotal lines according to tax exemption states
-    taxable_subtotal_comm = item_subtotal_rendered
-    if not ps_tax_exempt: taxable_subtotal_comm += ps_converted
-    if not ms_tax_exempt: taxable_subtotal_comm += ms_converted
-    
-    taxable_subtotal_wht = item_subtotal_rendered
-    if not ps_tax_exempt: taxable_subtotal_wht += ps_converted
-    if not ms_tax_exempt: taxable_subtotal_wht += ms_converted
+    if dual_currency_flow:
+        # USD Equipment Portfolio Pipeline
+        usd_subtotal = item_subtotal_rendered
+        usd_subtotal_after_disc = max(0.0, usd_subtotal - global_discount_input)
+        usd_comm_tax = (usd_subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
+        
+        if enable_wht:
+            usd_wht_tax = (usd_subtotal_after_disc * (wht_value_input / 100.0)) if wht_calc_type == "Percentage (%)" else wht_value_input
+        else:
+            usd_wht_tax = 0.0
+            
+        usd_grand_total = usd_subtotal_after_disc + usd_comm_tax + usd_wht_tax
+        
+        # MMK Services Portfolio Pipeline
+        mmk_subtotal = ps_price + ms_price
+        mmk_comm_tax = (mmk_subtotal * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
+        
+        if enable_wht:
+            mmk_wht_tax = (mmk_subtotal * (wht_value_input / 100.0)) if wht_calc_type == "Percentage (%)" else wht_value_input
+        else:
+            mmk_wht_tax = 0.0
+            
+        mmk_grand_total = mmk_subtotal + mmk_comm_tax + mmk_wht_tax
+        
+        # Mapping primary database logging records to reference assets
+        global_subtotal_calculated = usd_subtotal
+        calculated_grand_total = usd_grand_total
+        comm_tax_amount = usd_comm_tax
+        wht_tax_amount = usd_wht_tax
+        
+        # Render twin distinct output panels in layout telemetry
+        st.sidebar.markdown("#### 🛒 Equipment Portfolio (USD)")
+        st.sidebar.markdown(f"**Items Subtotal:** USD {usd_subtotal:,.2f}")
+        if global_discount_input > 0:
+            st.sidebar.markdown(f"**Discount:** -USD {global_discount_input:,.2f}")
+        if enable_commercial_tax:
+            st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +USD {usd_comm_tax:,.2f}")
+        if enable_wht:
+            st.sidebar.markdown(f"**Withholding Tax (WHT):** +USD {usd_wht_tax:,.2f}")
+        st.sidebar.markdown(f"### **Grand Total (USD):** USD {usd_grand_total:,.2f}")
+        
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("#### 🛠️ Services Portfolio (MMK)")
+        st.sidebar.markdown(f"**Services Subtotal:** MMK {mmk_subtotal:,.2f}")
+        if enable_commercial_tax:
+            st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +MMK {mmk_comm_tax:,.2f}")
+        if enable_wht:
+            st.sidebar.markdown(f"**Withholding Tax (WHT):** +MMK {mmk_wht_tax:,.2f}")
+        st.sidebar.markdown(f"### **Grand Total (MMK):** MMK {mmk_grand_total:,.2f}")
+    else:
+        # Standard Single Currency Pipeline Matrix
+        services_value = ps_price + ms_price
+        if currency_selection == "MMK" and ps_ms_currency == "USD":
+            services_value = services_value * exchange_rate
+            
+        global_subtotal_calculated = item_subtotal_rendered + services_value
+        subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
+        
+        comm_tax_amount = (subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
+        
+        if enable_wht:
+            wht_tax_amount = (subtotal_after_disc * (wht_value_input / 100.0)) if wht_calc_type == "Percentage (%)" else wht_value_input
+        else:
+            wht_tax_amount = 0.0
+            
+        calculated_grand_total = subtotal_after_disc + comm_tax_amount + wht_tax_amount
+        
+        st.sidebar.markdown(f"**Gross Subtotal:** {currency_symbol}{global_subtotal_calculated:,.2f}")
+        if global_discount_input > 0:
+            st.sidebar.markdown(f"**Discount:** -{currency_symbol}{global_discount_input:,.2f}")
+        if enable_commercial_tax:
+            st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +{currency_symbol}{comm_tax_amount:,.2f}")
+        if enable_wht:
+            st.sidebar.markdown(f"**Withholding Tax (WHT):** +{currency_symbol}{wht_tax_amount:,.2f}")
+        st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
 
-    comm_tax_amount = max(0.0, (taxable_subtotal_comm * discount_factor) * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
-    wht_tax_amount = max(0.0, (taxable_subtotal_wht * discount_factor) * (wht_pct / 100.0)) if enable_wht else 0.0
-    
-    calculated_grand_total = subtotal_after_disc + comm_tax_amount - wht_tax_amount
-    
+    # Generate custom context log summary string for database persistence mapping
     active_strategies = []
-    if enable_commercial_tax: active_strategies.append("Commercial Tax")
-    if enable_wht: active_strategies.append(f"WHT ({wht_pct}%)")
+    if enable_commercial_tax: active_strategies.append(f"Commercial Tax ({commercial_tax_pct}%)")
+    if enable_wht: active_strategies.append(f"WHT Mode: {wht_calc_type}")
     tax_type_selection = " + ".join(active_strategies) if active_strategies else "None"
-    global_tax_pct = commercial_tax_pct if enable_commercial_tax else wht_pct
+    global_tax_pct = commercial_tax_pct if enable_commercial_tax else 0.0
     calculated_tax = comm_tax_amount + wht_tax_amount
-    
-    st.sidebar.markdown(f"**Gross Subtotal:** {currency_symbol}{global_subtotal_calculated:,.2f}")
-    if enable_commercial_tax:
-        # Rendering Commercial Tax without showing the percentage symbol (%)
-        st.sidebar.markdown(f"**Commercial Tax:** +{currency_symbol}{comm_tax_amount:,.2f}")
-    if enable_wht:
-        st.sidebar.markdown(f"**Withholding Tax (WHT) ({wht_pct}%):** -{currency_symbol}{wht_tax_amount:,.2f}")
-    st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
 
-    # Metadata payload block dictionary to save to sqlite
+    # Wrap sandbox fields into external configuration block object payload
     extended_meta_payload = {
-        "services_currency": services_currency,
         "ps_desc": ps_desc,
         "ps_price": ps_price,
-        "ps_tax_exempt": ps_tax_exempt,
         "ms_desc": ms_desc,
         "ms_price": ms_price,
-        "ms_tax_exempt": ms_tax_exempt
+        "ps_ms_currency": ps_ms_currency,
+        "enable_commercial_tax": enable_commercial_tax,
+        "commercial_tax_pct": commercial_tax_pct,
+        "enable_wht": enable_wht,
+        "wht_calc_type": wht_calc_type,
+        "wht_value_input": wht_value_input,
+        "global_discount_input": global_discount_input
     }
     extended_meta_json_str = json.dumps(extended_meta_payload)
 
@@ -830,7 +915,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (quotation_auto_gen, current_user["id"], client_company, project_title, attn_person, attn_email, attn_phone, str(issue_date), validity_bound, lead_time_frame, payment_terms_desc, terms_and_cond, global_subtotal_calculated, global_discount_input, tax_type_selection, global_tax_pct, calculated_tax, calculated_grand_total, currency_selection, exchange_rate, json.dumps(st.session_state.working_items), extended_meta_json_str))
             conn.commit()
-        st.success("Draft compiled and archived inside your system portal records.")
+        st.success("Draft compiled and archived with full attribute states restored.")
 
     if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
         if st.session_state.default_logo_base64 is not None:
@@ -878,14 +963,15 @@ elif page_selection == "➕ Build New Quotation Module":
                 '''
 
         current_service_index = max_main_no
+        srv_symbol = "USD " if ps_ms_currency == "USD" else "MMK "
+        
         if ps_price > 0:
             current_service_index += 1
-            ps_total = ps_converted
             table_rows_html += f'''
             <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
                 <td style="text-align: center; color: #1e293b; padding: 8px;">{current_service_index}</td>
                 <td colspan="5" style="padding-left: 10px; color: #1e293b; font-size: 8.5pt; padding: 8px;">
-                    ARK Professional Services {" (Tax-Exempt)" if ps_tax_exempt else ""}
+                    ARK Professional Services
                 </td>
             </tr>
             <tr style="background-color: #ffffff;">
@@ -893,18 +979,17 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-PS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ps_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{srv_symbol}{ps_price:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{srv_symbol}{ps_price:,.2f}</td>
             </tr>
             '''
         if ms_price > 0:
             current_service_index += 1
-            ms_total = ms_converted
             table_rows_html += f'''
             <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
                 <td style="text-align: center; color: #1e293b; padding: 8px;">{current_service_index}</td>
                 <td colspan="5" style="padding-left: 10px; color: #1e293b; font-size: 8.5pt; padding: 8px;">
-                    ARK Maintenance Service {" (Tax-Exempt)" if ms_tax_exempt else ""}
+                    ARK Maintenance Service
                 </td>
             </tr>
             <tr style="background-color: #ffffff;">
@@ -912,34 +997,90 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-MS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ms_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{srv_symbol}{ms_price:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{srv_symbol}{ms_price:,.2f}</td>
             </tr>
             '''
 
-        discount_row_markup = ""
-        if global_discount_input > 0:
-            discount_row_markup = f'''
-            <tr>
-                <td style="color: #475569; padding: 4px 0;">Discount Applied:</td>
-                <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{global_discount_input:,.2f}</td>
-            </tr>
+        # --- DUAL VS SINGLE BREAKDOWN BOX BUILDING ---
+        if dual_currency_flow:
+            totals_box_html = f'''
+            <div class="totals-box" style="float: right; width: 45%; margin-top: 5px; page-break-inside: avoid;">
+                <table class="totals-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                    <tr>
+                        <td style="color: #475569; padding: 3px 0; font-weight: bold;">[Equipment Scope - USD]</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #475569; padding: 2px 0; padding-left: 10px;">Items Subtotal:</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap;">USD {usd_subtotal:,.2f}</td>
+                    </tr>
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Discount:</td><td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap;">-USD {global_discount_input:,.2f}</td></tr>' if global_discount_input > 0 else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax ({commercial_tax_pct}%):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+USD {usd_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Withholding Tax (WHT):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+USD {usd_wht_tax:,.2f}</td></tr>' if enable_wht else ''}
+                    <tr class="grand-total-tr" style="background-color: #1e293b; color: white; font-weight: bold;">
+                        <td style="padding: 5px; padding-left: 10px;">Grand Total (Equipment):</td>
+                        <td style="text-align: right; padding: 5px;">USD {usd_grand_total:,.2f}</td>
+                    </tr>
+                    <tr><td colspan="2" style="padding: 4px 0; border-bottom: 1px dashed #cbd5e1;"></td></tr>
+                    <tr>
+                        <td style="color: #475569; padding: 3px 0; font-weight: bold; margin-top: 5px;">[Services Scope - MMK]</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #475569; padding: 2px 0; padding-left: 10px;">Services Subtotal:</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap;">MMK {mmk_subtotal:,.2f}</td>
+                    </tr>
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax ({commercial_tax_pct}%):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+MMK {mmk_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Withholding Tax (WHT):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+MMK {mmk_wht_tax:,.2f}</td></tr>' if enable_wht else ''}
+                    <tr class="grand-total-tr" style="background-color: #00a8e8; color: white; font-weight: bold;">
+                        <td style="padding: 5px; padding-left: 10px;">Grand Total (Services):</td>
+                        <td style="text-align: right; padding: 5px;">MMK {mmk_grand_total:,.2f}</td>
+                    </tr>
+                </table>
+            </div>
             '''
+        else:
+            discount_row_markup = ""
+            if global_discount_input > 0:
+                discount_row_markup = f'''
+                <tr>
+                    <td style="color: #475569; padding: 4px 0;">Discount Applied:</td>
+                    <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{global_discount_input:,.2f}</td>
+                </tr>
+                '''
 
-        tax_row_markup = ""
-        if enable_commercial_tax:
-            tax_row_markup += f'''
-            <tr>
-                <td style="color: #475569; padding: 4px 0;">Commercial Tax:</td>
-                <td style="text-align: right; font-weight: 600; color: #475569; white-space: nowrap; padding: 4px 0;">+{currency_symbol}{comm_tax_amount:,.2f}</td>
-            </tr>
-            '''
-        if enable_wht:
-            tax_row_markup += f'''
-            <tr>
-                <td style="color: #475569; padding: 4px 0;">Withholding Tax WHT ({wht_pct}%):</td>
-                <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{wht_tax_amount:,.2f}</td>
-            </tr>
+            tax_row_markup = ""
+            if enable_commercial_tax:
+                tax_row_markup += f'''
+                <tr>
+                    <td style="color: #475569; padding: 4px 0;">Commercial Tax ({commercial_tax_pct}%):</td>
+                    <td style="text-align: right; font-weight: 600; color: #475569; white-space: nowrap; padding: 4px 0;">+{currency_symbol}{comm_tax_amount:,.2f}</td>
+                </tr>
+                '''
+            if enable_wht:
+                tax_row_markup += f'''
+                <tr>
+                    <td style="color: #475569; padding: 4px 0;">Withholding Tax (WHT):</td>
+                    <td style="text-align: right; font-weight: 600; white-space: nowrap; padding: 4px 0;">+{currency_symbol}{wht_tax_amount:,.2f}</td>
+                </tr>
+                '''
+
+            totals_box_html = f'''
+            <div class="totals-box" style="float: right; width: 40%; margin-top: 5px; page-break-inside: avoid;">
+                <table class="totals-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                    <tr>
+                        <td style="color: #475569; padding: 4px 0;">Gross Subtotal:</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap; padding: 4px 0;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
+                    </tr>
+                    {discount_row_markup}
+                    {tax_row_markup}
+                    <tr class="grand-total-tr" style="background-color: #00a8e8; color: white; font-weight: bold; font-size: 10pt;">
+                        <td style="padding: 8px;">Grand Total:</td>
+                        <td style="text-align: right; white-space: nowrap; padding: 8px;">{currency_symbol}{calculated_grand_total:,.2f}</td>
+                    </tr>
+                </table>
+            </div>
             '''
 
         sig_img_markup = ""
@@ -956,16 +1097,13 @@ elif page_selection == "➕ Build New Quotation Module":
             <style>
                 @page {{
                     size: A4;
-                    margin: 15mm 15mm 20mm 15mm;
+                    margin: 5mm 15mm 20mm 15mm;
                     @bottom-right {{
                         content: "Page " counter(page) " of " counter(pages);
                         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                         font-size: 8pt;
                         color: #64748b;
                     }}
-                }}
-                @page :first {{
-                    margin-top: 5mm;
                 }}
                 body {{
                     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -1011,11 +1149,6 @@ elif page_selection == "➕ Build New Quotation Module":
                 .data-table th {{ background-color: #1e293b; color: white; font-weight: 500; text-transform: uppercase; font-size: 8pt; padding: 8px; text-align: left; letter-spacing: 0.3px; }}
                 .data-table td {{ font-size: 8.5pt; border-bottom: 1px solid #f1f5f9; }}
                 
-                .totals-box {{ float: right; width: 40%; margin-top: 5px; page-break-inside: avoid; }}
-                .totals-table {{ width: 100%; border-collapse: collapse; font-size: 8.5pt; }}
-                .grand-total-tr {{ background-color: #00a8e8; color: white; font-weight: bold; font-size: 10pt; }}
-                .grand-total-tr td {{ padding: 8px; }}
-                
                 .footer-terms {{ margin-top: 25px; font-size: 8pt; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; clear: both; line-height: 1.4; }}
                 .signatory-container {{ margin-top: 25px; width: 100%; page-break-inside: avoid; clear: both; }}
                 .signatory-box {{ width: 240px; float: right; text-align: left; font-size: 8.5pt; color: #1e293b; }}
@@ -1060,7 +1193,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tr>
             </table>
             
-            <div class="clear"/>
+            <div class="clear"></div>
 
             <table class="data-table">
                 <thead>
@@ -1078,21 +1211,8 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tbody>
             </table>
 
-            <div class="totals-box">
-                <table class="totals-table">
-                    <tr>
-                        <td style="color: #475569; padding: 4px 0;">Gross Subtotal:</td>
-                        <td style="text-align: right; font-weight: 600; white-space: nowrap; padding: 4px 0;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
-                    </tr>
-                    {discount_row_markup}
-                    {tax_row_markup}
-                    <tr class="grand-total-tr">
-                        <td>Grand Total:</td>
-                        <td style="text-align: right; white-space: nowrap;">{currency_symbol}{calculated_grand_total:,.2f}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="clear"/>
+            {totals_box_html}
+            <div class="clear"></div>
 
             <div class="footer-terms">
                 <strong>Commercial Logistics Terms & Governance Conditions:</strong><br>
