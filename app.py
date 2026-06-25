@@ -372,6 +372,15 @@ if page_selection == "🏠 Dashboard Console":
             if st.session_state.get(f"expanded_view_{row['id']}", False):
                 with st.container():
                     st.markdown("#### 📋 Comprehensive Itemization Breakdown Table")
+                    
+                    # DRAFT RELOADING ENGINE INTERFACES
+                    if st.button("🔄 Load Draft back to Sandbox Workspace", key=f"reload_draft_{row['id']}"):
+                        try:
+                            st.session_state.working_items = json.loads(row['items_json'])
+                            st.success("Configuration loaded back to your working workspace! Navigate to 'Build New Quotation Module' tab.")
+                        except Exception as e:
+                            st.error(f"Failed reloading configuration: {e}")
+                            
                     st.write(f"**Attention Party Contact:** {row['attention_person']} ({row['attention_email']})")
                     st.write(f"**Valid Frame:** {row['validity']} | **Payment Terms:** {row['payment_term']}")
                     
@@ -659,7 +668,7 @@ elif page_selection == "➕ Build New Quotation Module":
     if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
         with get_db() as conn:
             conn.execute("""
-                INSERT INTO quotations (po_number, creator_id, customer_name, project_name, attention_person, attention_email, attention_phone, status, issue_date, validity, lead_time, payment_term, terms_conditions, subtotal, discount, tax, grand_total, currency_unit, exchange_rate, items_json)
+                INSERT OR REPLACE INTO quotations (po_number, creator_id, customer_name, project_name, attention_person, attention_email, attention_phone, status, issue_date, validity, lead_time, payment_term, terms_conditions, subtotal, discount, tax, grand_total, currency_unit, exchange_rate, items_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (quotation_auto_gen, current_user["id"], client_company, project_title, attn_person, attn_email, attn_phone, str(issue_date), validity_bound, lead_time_frame, payment_terms_desc, terms_and_cond, global_subtotal_base, global_discount_base, calculated_tax, calculated_grand_total, currency_selection, exchange_rate, json.dumps(st.session_state.working_items)))
             conn.commit()
@@ -670,7 +679,7 @@ elif page_selection == "➕ Build New Quotation Module":
         if st.session_state.default_logo_base64 is not None:
             logo_html = f'<img src="{st.session_state.default_logo_base64}" style="max-height: 85px; max-width: 250px; object-fit: contain;">'
         else:
-            logo_html = '<h1 style="color:#00a8e8; margin:0 0 5px 0; font-family:\'Helvetica Neue\',Arial; font-size: 26pt; letter-spacing: 0.5px;">ARK PREMIUM SOLUTIONS</h1>'
+            logo_html = '<h1 style="color:#00a8e8; margin:0 0 5px 0; font-family:\'Helvetica Neue\',Arial; font-size: 24pt; letter-spacing: 0.5px;">ARK PREMIUM SOLUTIONS</h1>'
 
         # --- ADAPTIVE HIERARCHICAL ROW SPAN COMPILER ---
         table_rows_html = ""
@@ -770,32 +779,35 @@ elif page_selection == "➕ Build New Quotation Module":
                 .divider {{ border-bottom: 3px solid #00a8e8; margin-top: 5px; margin-bottom: 25px; }}
                 .doc-title {{ font-size: 24pt; font-weight: bold; color: #1a202c; letter-spacing: -0.5px; margin: 0; }}
                 
-                .meta-table {{ width: 100%; margin-bottom: 30px; table-layout: fixed; }}
-                .meta-table td {{ vertical-align: top; border: none; padding: 0; }}
+                .meta-table {{ width: 100%; margin-bottom: 20px; table-layout: fixed; border-collapse: collapse; }}
+                .meta-table td {{ vertical-align: top; border: none; padding: 0; width: 50%; }}
                 
-                /* EXACTLY SYMMETRICAL HEIGHT BOXES */
-                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; height: 115px; box-sizing: border-box; }}
-                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; height: 115px; margin-left: 10px; box-sizing: border-box; }}
+                /* SAFE HEIGHT AUTO-WRAPPING CONTAINERS TO PREVENT TEXT COLLISION OVERFLOWS */
+                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; min-height: 115px; box-sizing: border-box; margin-right: 5px; display: block; }}
+                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; min-height: 115px; box-sizing: border-box; margin-left: 5px; display: block; }}
                 .card-title {{ font-size: 8pt; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }}
                 
-                .data-table {{ width: 100%; border-collapse: collapse; margin-bottom: 25px; }}
+                /* CLEAR-FIX PROTECTION MATRIX */
+                .clear {{ clear: both; height: 10px; }}
+                
+                .data-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; clear: both; }}
                 .data-table th {{ background-color: #1a202c; color: white; font-weight: bold; text-transform: uppercase; font-size: 8pt; padding: 10px; text-align: left; }}
                 .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 9pt; }}
                 
-                .totals-box {{ float: right; width: 40%; margin-top: 10px; }}
+                .totals-box {{ float: right; width: 40%; margin-top: 10px; page-break-inside: avoid; }}
                 .totals-table {{ width: 100%; border-collapse: collapse; }}
                 .totals-table td {{ padding: 6px 8px; font-size: 9.5pt; }}
                 .grand-total-tr {{ background-color: #00a8e8; color: white; font-weight: bold; font-size: 11pt; }}
                 .grand-total-tr td {{ padding: 10px 8px; }}
                 
-                .footer-terms {{ margin-top: 60px; font-size: 8pt; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 15px; page-break-inside: avoid; }}
+                .footer-terms {{ margin-top: 60px; font-size: 8pt; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 15px; page-break-inside: avoid; clear: both; }}
             </style>
         </head>
         <body>
             <div class="header-container">
                 <div class="header-logo">{logo_html}</div>
                 <div class="header-address">
-                    <div class="company-group-title">RK CORPORATE GROUP</div>
+                    <div class="company-group-title">ARK Premium Solutions Limited.</div>
                     <strong>ARK Corporate Office :</strong> 12th floor, Times City(office tower-2), Kamayut, Yangon, Myanmar.<br>
                     <strong>ARK Headquarters Office :</strong> 91, Shwe Taung Kyar 1st Street, Golden Valley 1, Bahan, Yangon, Myanmar.<br>
                     <strong>ARK Thailand Office :</strong> 1, Soi Ramkhamhaeng 118 Yaek 33-3, Saphan Sung 10240, Bangkok, Thailand.<br>
@@ -828,6 +840,8 @@ elif page_selection == "➕ Build New Quotation Module":
                     </td>
                 </tr>
             </table>
+            
+            <div class="clear"></div>
 
             <table class="data-table">
                 <thead>
