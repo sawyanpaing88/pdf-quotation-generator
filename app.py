@@ -1176,7 +1176,17 @@ elif page_selection == "➕ Build New Quotation Module":
     color: #1e293b; 
     display: block; 
 }}
-  
+/* Watermark styling */
+.watermark {{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.15; /* Adjust between 0.05 and 0.2 for best results */
+    z-index: -1000; /* Ensures it stays behind text */
+    width: 400px;   /* Adjust width as needed */
+    pointer-events: none; /* Allows text selection through the logo */
+}}  
             </style>
         </head>
         <body>
@@ -1240,6 +1250,21 @@ elif page_selection == "➕ Build New Quotation Module":
             <div class="clear">
             
             </div>
+<body>
+    <div class="watermark">
+        {f'<img src="{st.session_state.default_logo_base64}" style="width: 100%;">' if st.session_state.default_logo_base64 else ""}
+    </div>
+    
+    ```
+
+### Why this works:
+* **`position: fixed`**: This places the element relative to the viewport (the page itself) rather than the flow of your document, ensuring it stays centered regardless of page content.
+* **`transform: translate(-50%, -50%)`**: This is the standard CSS method to perfectly center an element that is fixed at `top: 50%, left: 50%`.
+* **`z-index: -1000`**: This ensures the image is rendered behind all your table data and text content.
+* **`opacity: 0.15`**: This makes the logo faint so it does not interfere with the readability of your quotation figures.
+* **`pointer-events: none`**: This is a pro-tip for PDFs generated from HTML—it ensures that if a user tries to highlight or copy text behind the watermark, their cursor interacts with the text instead of the image.
+
+**Note:** Ensure your logo image is not too large in file size, as base64-encoded images can significantly increase the PDF size. The current approach is safe for standard document resolutions.
 
           <div class="footer-terms">
     <strong>Commercial Logistics Terms & Governance Conditions:</strong><br>
