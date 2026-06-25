@@ -13,9 +13,11 @@ try:
     from weasyprint import HTML
 except ImportError:
     class HTML:
-        def __init__(self, string, **kwargs): self.string = string
+        def __init__(self, string, **kwargs): 
+            self.string = string
         def write_pdf(self, target, **kwargs):
-            with open(target, \"wb\") as f: f.write(b\"%PDF-1.4 Mock PDF Output Content\")
+            with open(target, "wb") as f: 
+                f.write(b"%PDF-1.4 Mock PDF Output Content")
 
 from pypdf import PdfReader
 
