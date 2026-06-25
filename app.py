@@ -903,7 +903,7 @@ elif page_selection == "➕ Build New Quotation Module":
                     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                     color: #1e293b;
                     font-size: 9pt;
-                    line-height: 1.5;
+                    line-height: 1.6;
                     width: 100%;
                 }}
               /* Constrained Header to 1.6in */
