@@ -441,7 +441,6 @@ elif page_selection == "➕ Build New Quotation Module":
     currency_selection = st.sidebar.selectbox("Base Output Currency Mode", ["USD", "MMK"])
     exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, value=3250.0, step=10.0)
     
-    # SYSTEM CONFIGURATION UNIFIED TEXT DISPLAY (Ks -> MMK & $ -> USD changes)
     currency_symbol = "USD " if currency_selection == "USD" else "MMK "
     conversion_multiplier = exchange_rate if currency_selection == "MMK" else 1.0
     
@@ -552,7 +551,6 @@ elif page_selection == "➕ Build New Quotation Module":
 
     st.info("💡 **ARK Architecture Rule:** Main rows (e.g., 1, 2) are pure text dividers. Add system units, metrics, and pricing components within Sub-Rows (e.g., 1.1, 1.2).")
 
-    # Live UI Workspace Grid (Keeps standard formatting inputs isolated)
     edited_df = st.data_editor(
         df_display[blueprint_columns],
         num_rows="dynamic",
@@ -679,7 +677,6 @@ elif page_selection == "➕ Build New Quotation Module":
         else:
             logo_html = '<h1 style="color:#00a8e8; margin:0 0 5px 0; font-family:\'Helvetica Neue\',Arial; font-size: 24pt; letter-spacing: 0.5px;">ARK PREMIUM SOLUTION</h1>'
 
-        # Find highest dynamic table main index integer to compute trailing row numbers sequentially
         max_main_no = 0
         for item in st.session_state.working_items:
             try:
@@ -699,7 +696,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 table_rows_html += f'''
                 <tr style="background-color: #edf2f7; font-weight: bold; border-top: 2px solid #cbd5e0;">
                     <td style="text-align: center;">{item.get("No", "")}</td>
-                    <td colspan="5" style="padding-left: 10px; color: #1a202c; font-size: 10pt; letter-spacing: 0.3px;">
+                    <td colspan="5" style="padding-left: 10px; color: #1a202c; font-size: 8.5pt; letter-spacing: 0.3px;">
                         {item.get("Description", "Main Section")}
                     </td>
                 </tr>
@@ -709,7 +706,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 total_p = (item.get("Total Price") or 0.0) * conversion_multiplier
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
-                    <td style="text-align: center; color: #718096; font-size: 8.5pt;">{item.get("No", "")}</td>
+                    <td style="text-align: center; color: #718096;">{item.get("No", "")}</td>
                     <td style="color: #4a5568; font-family: monospace;">{item.get("Part Number/Model", "")}</td>
                     <td style="padding-left: 15px; color: #2d3748; font-style: italic;">{item.get("Description", "")}</td>
                     <td style="text-align: center;">{item.get("Qty", 1)}</td>
@@ -718,16 +715,16 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tr>
                 '''
 
-        # RULE: Services follow dynamic trailing counter increments sequentially instead of hardcoded strings
         current_service_index = max_main_no
         if ps_price_usd > 0:
             current_service_index += 1
             ps_total = ps_price_usd * conversion_multiplier
+            # Replaced <br> logic safely via inline styled cell with word-wrap architecture
             table_rows_html += f'''
             <tr style="background-color: #f7fafc; font-weight: 600;">
                 <td style="text-align: center;">{current_service_index}</td>
-                <td>SRV-PROF</td>
-                <td>{ps_desc}</td>
+                <td>SRV-ARK-PS</td>
+                <td style="white-space: pre-line; padding-left: 15px;">{ps_desc}</td>
                 <td style="text-align: center;">1</td>
                 <td style="text-align: right; color: #4a5568;">{currency_symbol}{ps_total:,.2f}</td>
                 <td style="text-align: right;">{currency_symbol}{ps_total:,.2f}</td>
@@ -739,11 +736,21 @@ elif page_selection == "➕ Build New Quotation Module":
             table_rows_html += f'''
             <tr style="background-color: #f7fafc; font-weight: 600;">
                 <td style="text-align: center;">{current_service_index}</td>
-                <td>SRV-MGMT</td>
-                <td>{ms_desc}</td>
+                <td>SRV-ARK-MS</td>
+                <td style="white-space: pre-line; padding-left: 15px;">{ms_desc}</td>
                 <td style="text-align: center;">1</td>
                 <td style="text-align: right; color: #4a5568;">{currency_symbol}{ms_total:,.2f}</td>
                 <td style="text-align: right;">{currency_symbol}{ms_total:,.2f}</td>
+            </tr>
+            '''
+
+        # Conditional discount row architecture
+        discount_row_markup = ""
+        if global_discount_input > 0:
+            discount_row_markup = f'''
+            <tr>
+                <td style="color: #4a5568;">Discount Applied:</td>
+                <td style="text-align: right; font-weight: 600; color: #e53e3e;">-{currency_symbol}{global_discount_input:,.2f}</td>
             </tr>
             '''
 
@@ -804,16 +811,16 @@ elif page_selection == "➕ Build New Quotation Module":
                 .meta-table {{ width: 100%; margin-bottom: 20px; table-layout: fixed; border-collapse: collapse; }}
                 .meta-table td {{ vertical-align: top; border: none; padding: 0; width: 50%; }}
                 
-                /* RULE: Fixed Symmetric Sizing Layout with Content Font Scale Autofit Configuration */
                 .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; height: 135px; min-height: 135px; max-height: 135px; box-sizing: border-box; margin-right: 6px; display: block; overflow: hidden; font-size: 9pt; }}
                 .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; height: 135px; min-height: 135px; max-height: 135px; box-sizing: border-box; margin-left: 6px; display: block; overflow: hidden; font-size: 9pt; }}
                 .card-title {{ font-size: 8pt; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }}
                 
                 .clear {{ clear: both; height: 10px; }}
                 
-                .data-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; clear: both; }}
-                .data-table th {{ background-color: #0A2540; color: white; font-weight: bold; text-transform: uppercase; font-size: 8pt; padding: 10px; text-align: left; }}
-                .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 9pt; }}
+                /* GLOBAL FONT SCALING / WORD-BREAK PROTECTION ENFORCED ACROSS ALL COLUMNS */
+                .data-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; clear: both; table-layout: fixed; }}
+                .data-table th {{ background-color: #0A2540; color: white; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; padding: 10px; text-align: left; word-wrap: break-word; }}
+                .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 8.5pt; word-wrap: break-word; overflow-wrap: break-word; }}
                 
                 .totals-box {{ float: right; width: 40%; margin-top: 10px; page-break-inside: avoid; }}
                 .totals-table {{ width: 100%; border-collapse: collapse; }}
@@ -869,8 +876,8 @@ elif page_selection == "➕ Build New Quotation Module":
                 <thead>
                     <tr>
                         <th style="width: 7%; text-align: center;">No</th>
-                        <th style="width: 18%;">Part Number / Identifier</th>
-                        <th style="width: 40%;">Functional Itemization Specifications</th>
+                        <th style="width: 20%;">Part Number / Identifier</th>
+                        <th style="width: 38%;">Functional Itemization Specifications</th>
                         <th style="width: 6%; text-align: center;">Qty</th>
                         <th style="width: 14%; text-align: right;">Unit Price</th>
                         <th style="width: 15%; text-align: right;">Total Price</th>
@@ -887,10 +894,7 @@ elif page_selection == "➕ Build New Quotation Module":
                         <td style="color: #4a5568;">Gross Subtotal:</td>
                         <td style="text-align: right; font-weight: 600;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
                     </tr>
-                    <tr>
-                        <td style="color: #4a5568;">Discount Applied:</td>
-                        <td style="text-align: right; font-weight: 600; color: #e53e3e;">-{currency_symbol}{global_discount_input:,.2f}</td>
-                    </tr>
+                    {discount_row_markup}
                     {tax_row_markup}
                     <tr class="grand-total-tr">
                         <td>Grand Total:</td>
