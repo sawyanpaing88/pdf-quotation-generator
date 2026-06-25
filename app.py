@@ -510,7 +510,6 @@ elif page_selection == "➕ Build New Quotation Module":
     exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, value=3250.0, step=10.0)
     
     currency_symbol = "USD " if currency_selection == "USD" else "MMK "
-    # Note: conversion_multiplier is intentionally ONLY applied during PDF formatting and calculated layout structures.
     conversion_multiplier = exchange_rate if currency_selection == "MMK" else 1.0
     
     st.sidebar.markdown("### 📋 System Template")
@@ -592,7 +591,6 @@ elif page_selection == "➕ Build New Quotation Module":
             st.success(f"Applied a uniform {global_margin_input}% margin setting across all sub-portfolio entries.")
             st.rerun()
 
-    # --- LIVE CALCULATION PIPELINE (Isolated From Live Conversion Alterations) ---
     for item in st.session_state.working_items:
         if not item.get("is_sub", False):
             item["Part Number"] = ""
@@ -602,12 +600,10 @@ elif page_selection == "➕ Build New Quotation Module":
             item["Total Price"] = None
         else:
             qty = float(item.get("Qty") or 0)
-            u_p = float(item.get("Unit Price") or 0.0) # Entered Base Unit Price stays preserved here
+            u_p = float(item.get("Unit Price") or 0.0)
             m_pct = float(item.get("Margin") or 0.0) / 100.0
             final_unit_price = u_p / (1 - m_pct) if m_pct < 1.0 else u_p
             item["Calculated Unit Price Base"] = round(final_unit_price, 2)
-            
-            # Currency conversions are projected ONLY into the row total calculation in real time
             item["Total Price"] = round((final_unit_price * qty) * conversion_multiplier, 2)
 
     blueprint_columns = ["No", "Part Number", "Description", "Qty", "Unit Price", "Margin", "Total Price"]
@@ -715,12 +711,10 @@ elif page_selection == "➕ Build New Quotation Module":
         ms_desc = st.text_area("Managed Service Description", "ARK Premium 24/7 Monitoring")
         ms_price_usd = st.number_input("Managed Service (USD)", min_value=0.0, value=0.0)
 
-    # --- SIDEBAR TAX CONFIGURATION SELECTION MAPPING ---
     st.sidebar.markdown("### 🏛️ Tax Strategies")
     tax_type_selection = st.sidebar.selectbox("Tax Strategy Strategy", ["Commercial Tax", "Withholding Tax (WHT)"])
     global_tax_pct = st.sidebar.number_input("Tax Factor (%)", min_value=0.0, value=5.0 if tax_type_selection == "Commercial Tax" else 2.0)
 
-    # Calculate subtotal using totals already containing conversion values
     item_subtotal_rendered = sum([float(item.get("Total Price") or 0.0) for item in st.session_state.working_items if item.get("Total Price") is not None])
     global_subtotal_calculated = item_subtotal_rendered + ((ps_price_usd + ms_price_usd) * conversion_multiplier)
     
@@ -731,7 +725,6 @@ elif page_selection == "➕ Build New Quotation Module":
         calculated_tax = subtotal_after_disc * (global_tax_pct / 100.0)
         calculated_grand_total = subtotal_after_disc + calculated_tax
     else:
-        # Withholding Tax strategy subtracts liability from final gross payment obligations
         calculated_tax = subtotal_after_disc * (global_tax_pct / 100.0)
         calculated_grand_total = subtotal_after_disc - calculated_tax
     
@@ -757,7 +750,6 @@ elif page_selection == "➕ Build New Quotation Module":
 
         max_main_no = max([int(float(item.get("parent_idx", 0))) for item in st.session_state.working_items if str(item.get("parent_idx", "")).isdigit()] + [1])
 
-        # --- HTML ROW POPULATION BUILDER ---
         table_rows_html = ""
         for item in st.session_state.working_items:
             is_sub = item.get("is_sub", False)
@@ -772,23 +764,17 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tr>
                 '''
             else:
-                # Execution calculation rendering rules map baseline values directly across conversion targets
                 raw_base_unit = float(item.get("Calculated Unit Price Base") or 0.0)
                 unit_p = raw_base_unit * conversion_multiplier
                 total_p = (raw_base_unit * float(item.get("Qty") or 0)) * conversion_multiplier
-                
-                # Render 0 price value as FOC
-                unit_p_str = "FOC" if unit_p == 0.0 else f"{currency_symbol}{unit_p:,.2f}"
-                total_p_str = "FOC" if total_p == 0.0 else f"{currency_symbol}{total_p:,.2f}"
-                
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
                     <td style="text-align: center; color: #64748b; padding: 8px;">{item.get("No", "")}</td>
                     <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">{item.get("Part Number", "")}</td>
                     <td style="padding-left: 10px; color: #334155; font-style: italic; word-break: break-word; padding: 8px;">{item.get("Description", "")}</td>
                     <td style="text-align: center; color: #334155; padding: 8px;">{item.get("Qty", 1)}</td>
-                    <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{unit_p_str}</td>
-                    <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{total_p_str}</td>
+                    <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{unit_p:,.2f}</td>
+                    <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{total_p:,.2f}</td>
                 </tr>
                 '''
 
@@ -796,29 +782,27 @@ elif page_selection == "➕ Build New Quotation Module":
         if ps_price_usd > 0:
             current_service_index += 1
             ps_total = ps_price_usd * conversion_multiplier
-            ps_total_str = "FOC" if ps_total == 0.0 else f"{currency_symbol}{ps_total:,.2f}"
             table_rows_html += f'''
             <tr style="background-color: #ffffff;">
                 <td style="text-align: center; color: #64748b; padding: 8px;">{current_service_index}</td>
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-PS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ps_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{ps_total_str}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{ps_total_str}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
             </tr>
             '''
         if ms_price_usd > 0:
             current_service_index += 1
             ms_total = ms_price_usd * conversion_multiplier
-            ms_total_str = "FOC" if ms_total == 0.0 else f"{currency_symbol}{ms_total:,.2f}"
             table_rows_html += f'''
             <tr style="background-color: #ffffff;">
                 <td style="text-align: center; color: #64748b; padding: 8px;">{current_service_index}</td>
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-MS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ms_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{ms_total_str}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{ms_total_str}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
             </tr>
             '''
 
@@ -831,7 +815,6 @@ elif page_selection == "➕ Build New Quotation Module":
             </tr>
             '''
 
-        tax_label_action = "Tax Liability ADD" if tax_type_selection == "Commercial Tax" else "Tax Retention WHT SUBTRACT"
         tax_row_markup = f'''
         <tr>
             <td style="color: #475569; padding: 4px 0;">{tax_type_selection} ({global_tax_pct}%):</td>
@@ -839,12 +822,11 @@ elif page_selection == "➕ Build New Quotation Module":
         </tr>
         '''
 
-        # Account Manager Signature block generation rules
         sig_img_markup = ""
         if current_user["signature_b64"]:
             sig_img_markup = f'<img src="{current_user["signature_b64"]}" style="max-height: 55px; margin-top: 5px; margin-bottom: 2px; display: block;">'
         else:
-            sig_img_markup = '<div style="height: 45px; margin-top: 5px; color: #cbd5e1; font-style: italic; font-size: 8pt;">Signature Signature Pending</div>'
+            sig_img_markup = '<div style="height: 45px; margin-top: 5px; color: #cbd5e1; font-style: italic; font-size: 8pt;">Signature Pending</div>'
 
         html_document = f"""
         <!DOCTYPE html>
@@ -901,7 +883,6 @@ elif page_selection == "➕ Build New Quotation Module":
                 
                 .clear {{ clear: both; height: 5px; }}
                 
-                /* MILD DARK BLUE HEADER CONFIGURATION */
                 .data-table {{ width: 100%; max-width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; clear: both; table-layout: auto; }}
                 .data-table th {{ background-color: #1e293b; color: white; font-weight: 500; text-transform: uppercase; font-size: 8pt; padding: 8px; text-align: left; letter-spacing: 0.3px; }}
                 .data-table td {{ font-size: 8.5pt; border-bottom: 1px solid #f1f5f9; }}
@@ -913,7 +894,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 
                 .footer-terms {{ margin-top: 25px; font-size: 8pt; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; clear: both; line-height: 1.4; }}
                 .signatory-container {{ margin-top: 25px; width: 100%; page-break-inside: avoid; clear: both; }}
-                .signatory-box {{ width: 220px; float: right; font-size: 8.5pt; color: #1e293b; }}
+                .signatory-box {{ width: 220px; float: left; font-size: 8.5pt; color: #1e293b; }}
             </style>
         </head>
         <body>
@@ -921,10 +902,10 @@ elif page_selection == "➕ Build New Quotation Module":
                 <div class="header-logo">{logo_html}</div>
                 <div class="header-address">
                     <div class="company-group-title">ARK Premium Solution Limited</div>
-                    <strong>ARK Corporate Office :</strong> 18th floor, Times City(office tower-2), Kamayut, Yangon, Myanmar.<br>
+                    <strong>ARK Corporate Office :</strong> 12th floor, Times City(office tower-2), Kamayut, Yangon, Myanmar.<br>
                     <strong>ARK Headquarters Office :</strong> 91, Shwe Taung Kyar 1st Street, Golden Valley 1, Bahan, Yangon, Myanmar.<br>
                     <strong>ARK Thailand Office :</strong> 1, Soi Ramkhamhaeng 118 Yaek 33-3, Saphan Sung 10240, Bangkok, Thailand.<br>
-                    www.arktechsolutions.net
+                    <strong>Tel:</strong> +95 9 445830101
                 </div>
             </div>
 
@@ -962,7 +943,7 @@ elif page_selection == "➕ Build New Quotation Module":
                     <tr>
                         <th style="width: 6%; text-align: center;">No</th>
                         <th style="width: 22%;">Part Number</th>
-                        <th style="width: 42%;">FUNCTIONAL ITEMIZATION /SPECIFICATIONS</th>
+                        <th style="width: 42%;">Item Description Specifications</th>
                         <th style="width: 5%; text-align: center;">Qty</th>
                         <th style="width: 12%; text-align: right;">Unit Price</th>
                         <th style="width: 13%; text-align: right;">Total Price</th>
@@ -1039,4 +1020,3 @@ elif page_selection == "➕ Build New Quotation Module":
                 
         except Exception as pdf_err:
             st.error(f"Engine compilation fault isolated: {pdf_err}")
-}
