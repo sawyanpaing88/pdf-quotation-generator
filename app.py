@@ -550,7 +550,7 @@ elif page_selection == "➕ Build New Quotation Module":
     with meta_c3:
         lead_time_frame = st.text_input("Estimated Equipment Delivery Lead Time", "4-6 Weeks")
         payment_terms_desc = st.text_input("Agreed Commercial Payment Terms", "50% Advance, 50% Upon Delivery")
-        terms_and_cond = st.text_area("Custom Legal Terms & Conditions Scope", "1. Standard ARK Warranty applies.\n2. Prices exclude deployment unless itemized below.")
+        terms_and_cond = st.text_area("Custom Legal Terms & Conditions Scope", "1. Standard Vendor Warranty applies.\n2. Prices exclude deployment unless itemized below.")
 
     st.markdown("---")
     uploaded_doc = st.file_uploader("Ingest Document Vector (.xlsx, .xls, .csv, .pdf supported)", type=["xlsx", "xls", "csv", "pdf"])
