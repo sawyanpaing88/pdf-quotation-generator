@@ -1016,7 +1016,7 @@ elif page_selection == "➕ Build New Quotation Module":
                         <td style="text-align: right; font-weight: 600; white-space: nowrap;">USD {usd_subtotal:,.2f}</td>
                     </tr>
                     {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Discount:</td><td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap;">-USD {global_discount_input:,.2f}</td></tr>' if global_discount_input > 0 else ''}
-                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax ({commercial_tax_pct}%):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+USD {usd_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax (CT):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+USD {usd_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
                     {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Withholding Tax (WHT):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+USD {usd_wht_tax:,.2f}</td></tr>' if enable_wht else ''}
                     <tr class="grand-total-tr" style="background-color: #1e293b; color: white; font-weight: bold;">
                         <td style="padding: 5px; padding-left: 10px;">Grand Total (Equipment):</td>
