@@ -771,6 +771,7 @@ elif page_selection == "➕ Build New Quotation Module":
         max_main_no = max([int(float(item.get("parent_idx", 0))) for item in st.session_state.working_items if str(item.get("parent_idx", "")).isdigit()] + [1])
 
         # --- HTML ROW POPULATION BUILDER ---
+# --- HTML ROW POPULATION BUILDER ---
         table_rows_html = ""
         for item in st.session_state.working_items:
             is_sub = item.get("is_sub", False)
@@ -788,14 +789,24 @@ elif page_selection == "➕ Build New Quotation Module":
                 raw_base_unit = float(item.get("Calculated Unit Price Base") or 0.0)
                 unit_p = raw_base_unit * conversion_multiplier
                 total_p = (raw_base_unit * float(item.get("Qty") or 0)) * conversion_multiplier
+                
+                # --- FOC LOGIC START ---
+                if total_p <= 0:
+                    display_total = "FOC"
+                    display_unit = "FOC"
+                else:
+                    display_total = f"{currency_symbol}{total_p:,.2f}"
+                    display_unit = f"{currency_symbol}{unit_p:,.2f}"
+                # --- FOC LOGIC END ---
+
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
                     <td style="text-align: center; color: #64748b; padding: 8px;">{item.get("No", "")}</td>
                     <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">{item.get("Part Number", "")}</td>
                     <td style="padding-left: 10px; color: #334155; font-style: italic; word-break: break-word; padding: 8px;">{item.get("Description", "")}</td>
                     <td style="text-align: center; color: #334155; padding: 8px;">{item.get("Qty", 1)}</td>
-                    <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{unit_p:,.2f}</td>
-                    <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{total_p:,.2f}</td>
+                    <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{display_unit}</td>
+                    <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{display_total}</td>
                 </tr>
                 '''
 
