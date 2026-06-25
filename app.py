@@ -507,7 +507,7 @@ elif page_selection == "➕ Build New Quotation Module":
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 💱 Currency Settings")
     currency_selection = st.sidebar.selectbox("Base Output Currency Mode", ["USD", "MMK"])
-    exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=0.0, value=3250.0, step=10.0)
+    exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, value=3250.0, step=10.0)
     
     currency_symbol = "USD " if currency_selection == "USD" else "MMK "
     conversion_multiplier = exchange_rate if currency_selection == "MMK" else 1.0
@@ -707,17 +707,15 @@ elif page_selection == "➕ Build New Quotation Module":
     srv_c1, srv_c2 = st.columns(2)
     with srv_c1:
         ps_desc = st.text_area("Professional Service Description", "ARK Implementation Support")
-        ps_price_usd = st.number_input("Professional Service (USD)", min_value=0.0, value=0.0)
-        ps_price_mmk = st.number_input("Professional Service (MMK)", min_value=0.0, value=0.0)
-        ps_foc = st.checkbox("Professional Service is Free of Charge (FOC)", value=False)
+        # Fixed: Input label dynamically binds to selected currency tracking
+        ps_price = st.number_input(f"Professional Service ({currency_selection})", min_value=0.0, value=0.0, key="ps_price_input")
     with srv_c2:
         ms_desc = st.text_area("Maintenance Service Description", "ARK Premium 24/7 Monitoring")
-        ms_price_usd = st.number_input("Maintenance Service (USD)", min_value=0.0, value=0.0)
-        ms_price_mmk = st.number_input("Maintenance Service (MMK)", min_value=0.0, value=0.0)
-        ms_foc = st.checkbox("Maintenance Service is Free of Charge (FOC)", value=False)
+        # Fixed: Input label dynamically binds to selected currency tracking
+        ms_price = st.number_input(f"Maintenance Service ({currency_selection})", min_value=0.0, value=0.0, key="ms_price_input")
 
     # --- SIDEBAR TAX CONFIGURATION SELECTION MAPPING ---
-    st.sidebar.markdown("### 📋 Tax Strategies")
+    st.sidebar.markdown("### 🏛️ Tax Strategies")
     enable_commercial_tax = st.sidebar.checkbox("Apply Commercial Tax", value=True)
     commercial_tax_pct = 5.0
     if enable_commercial_tax:
@@ -728,17 +726,10 @@ elif page_selection == "➕ Build New Quotation Module":
     if enable_wht:
         wht_pct = st.sidebar.number_input("Withholding Tax (WHT) Factor (%)", min_value=0.0, value=2.0, key="wht_tax_val")
 
-    # Evaluate execution cost paths accounting for currency mode selection
-    if currency_selection == "USD":
-        effective_ps_price = 0.0 if ps_foc else ps_price_usd
-        effective_ms_price = 0.0 if ms_foc else ms_price_usd
-    else:
-        effective_ps_price = 0.0 if ps_foc else ps_price_mmk
-        effective_ms_price = 0.0 if ms_foc else ms_price_mmk
-
     # Calculate subtotal using totals already containing conversion values
     item_subtotal_rendered = sum([float(item.get("Total Price") or 0.0) for item in st.session_state.working_items if item.get("Total Price") is not None])
-    global_subtotal_calculated = item_subtotal_rendered + effective_ps_price + effective_ms_price
+    # Fixed: Since ps_price and ms_price match currency selection, add them directly without double multiplication
+    global_subtotal_calculated = item_subtotal_rendered + ps_price + ms_price
     
     global_discount_input = st.sidebar.number_input(f"Discount ({currency_selection})", min_value=0.0, value=0.0)
     subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
@@ -762,13 +753,7 @@ elif page_selection == "➕ Build New Quotation Module":
         st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +{currency_symbol}{comm_tax_amount:,.2f}")
     if enable_wht:
         st.sidebar.markdown(f"**Withholding Tax (WHT) ({wht_pct}%):** -{currency_symbol}{wht_tax_amount:,.2f}")
-        
-    # Dual currency grand total sidebar validation pipeline
-    if currency_selection == "USD" and exchange_rate > 0:
-        grand_total_mmk = calculated_grand_total * exchange_rate
-        st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f} / MMK {grand_total_mmk:,.2f}")
-    else:
-        st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
+    st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
 
     action_c1, action_c2 = st.columns(2)
     if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
@@ -828,16 +813,10 @@ elif page_selection == "➕ Build New Quotation Module":
                 '''
 
         current_service_index = max_main_no
-        if (ps_price_usd > 0 or ps_price_mmk > 0) or ps_foc:
+        if ps_price > 0:
             current_service_index += 1
-            if ps_foc:
-                ps_display_unit = "FOC"
-                ps_display_total = "FOC"
-            else:
-                ps_base_price = ps_price_usd if currency_selection == "USD" else ps_price_mmk
-                ps_display_unit = f"{currency_symbol}{ps_base_price:,.2f}"
-                ps_display_total = f"{currency_symbol}{ps_base_price:,.2f}"
-
+            # Fixed: Value already matches currency configuration context
+            ps_total = ps_price
             # Block Header for Professional Services
             table_rows_html += f'''
             <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
@@ -851,20 +830,14 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-PS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ps_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{ps_display_unit}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{ps_display_total}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
             </tr>
             '''
-        if (ms_price_usd > 0 or ms_price_mmk > 0) or ms_foc:
+        if ms_price > 0:
             current_service_index += 1
-            if ms_foc:
-                ms_display_unit = "FOC"
-                ms_display_total = "FOC"
-            else:
-                ms_base_price = ms_price_usd if currency_selection == "USD" else ms_price_mmk
-                ms_display_unit = f"{currency_symbol}{ms_base_price:,.2f}"
-                ms_display_total = f"{currency_symbol}{ms_base_price:,.2f}"
-
+            # Fixed: Value already matches currency configuration context
+            ms_total = ms_price
             # Block Header for Maintenance Services
             table_rows_html += f'''
             <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
@@ -878,8 +851,8 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-MS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ms_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{ms_display_unit}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{ms_display_total}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
             </tr>
             '''
 
@@ -914,13 +887,6 @@ elif page_selection == "➕ Build New Quotation Module":
         else:
             sig_img_markup = '<div style="height: 45px; margin-top: 5px; color: #cbd5e1; font-style: italic; font-size: 8pt;">Signature Pending</div>'
 
-        # Document wide Dual Currency rendering decision execution path
-        if currency_selection == "USD" and exchange_rate > 0:
-            grand_total_mmk = calculated_grand_total * exchange_rate
-            grand_total_html = f"{currency_symbol}{calculated_grand_total:,.2f} /<br>MMK {grand_total_mmk:,.2f}"
-        else:
-            grand_total_html = f"{currency_symbol}{calculated_grand_total:,.2f}"
-
         html_document = f"""
         <!DOCTYPE html>
         <html>
@@ -944,11 +910,10 @@ elif page_selection == "➕ Build New Quotation Module":
                     line-height: 1.6;
                     width: 100%;
                 }}
-                /* Constrained Header to 1.6in with overflow hidden resolution */
                 .header-container {{ 
                     text-align: center; 
                     max-height: 1.6in; 
-                    overflow: hidden; 
+                    overflow: fixed; 
                     margin-bottom: 10px;
                 }}    
                 .header-logo {{
@@ -1059,7 +1024,7 @@ elif page_selection == "➕ Build New Quotation Module":
                     {tax_row_markup}
                     <tr class="grand-total-tr">
                         <td>Grand Total:</td>
-                        <td style="text-align: right; white-space: nowrap;">{grand_total_html}</td>
+                        <td style="text-align: right; white-space: nowrap;">{currency_symbol}{calculated_grand_total:,.2f}</td>
                     </tr>
                 </table>
             </div>
