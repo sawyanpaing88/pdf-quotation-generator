@@ -704,15 +704,17 @@ elif page_selection == "➕ Build New Quotation Module":
                 st.rerun()
 
     st.markdown("---")
-    srv_c1, srv_c2 = st.columns(2)
+    
+    # --- SERVICES INPUT MATRIX WITH CURRENCY MATRIX CONTROL ---
+    srv_c1, srv_c2, srv_c3 = st.columns([3, 3, 2])
     with srv_c1:
         ps_desc = st.text_area("Professional Service Description", "ARK Implementation Support")
-        # Fixed: Input label dynamically binds to selected currency tracking
-        ps_price = st.number_input(f"Professional Service ({currency_selection})", min_value=0.0, value=0.0, key="ps_price_input")
+        ps_price = st.number_input("Professional Service Price Value", min_value=0.0, value=0.0, key="ps_price_input")
     with srv_c2:
         ms_desc = st.text_area("Maintenance Service Description", "ARK Premium 24/7 Monitoring")
-        # Fixed: Input label dynamically binds to selected currency tracking
-        ms_price = st.number_input(f"Maintenance Service ({currency_selection})", min_value=0.0, value=0.0, key="ms_price_input")
+        ms_price = st.number_input("Maintenance Service Price Value", min_value=0.0, value=0.0, key="ms_price_input")
+    with srv_c3:
+        ps_ms_currency = st.selectbox("Services Functional Currency Option", ["USD", "MMK"], key="ps_ms_currency_select")
 
     # --- SIDEBAR TAX CONFIGURATION SELECTION MAPPING ---
     st.sidebar.markdown("### 🏛️ Tax Strategies")
@@ -726,34 +728,83 @@ elif page_selection == "➕ Build New Quotation Module":
     if enable_wht:
         wht_pct = st.sidebar.number_input("Withholding Tax (WHT) Factor (%)", min_value=0.0, value=2.0, key="wht_tax_val")
 
-    # Calculate subtotal using totals already containing conversion values
+    global_discount_input = st.sidebar.number_input("Global Discount Value", min_value=0.0, value=0.0)
+
+    # --- DUAL INTEGRATION TAX/CALCULATION ENGINE PIPELINE ---
     item_subtotal_rendered = sum([float(item.get("Total Price") or 0.0) for item in st.session_state.working_items if item.get("Total Price") is not None])
-    # Fixed: Since ps_price and ms_price match currency selection, add them directly without double multiplication
-    global_subtotal_calculated = item_subtotal_rendered + ps_price + ms_price
     
-    global_discount_input = st.sidebar.number_input(f"Discount ({currency_selection})", min_value=0.0, value=0.0)
-    subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
+    # Isolate condition where main portfolio currency is USD but services are tracking explicitly in MMK
+    dual_currency_flow = (currency_selection == "USD" and ps_ms_currency == "MMK")
     
-    comm_tax_amount = (subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
-    wht_tax_amount = (subtotal_after_disc * (wht_pct / 100.0)) if enable_wht else 0.0
-    
-    # Grand total logic handles both adjustments simultaneously
-    calculated_grand_total = subtotal_after_disc + comm_tax_amount - wht_tax_amount
-    
-    # Telemetry data mapping strings for database archival 
+    if dual_currency_flow:
+        # USD Equipment Portfolio Pipeline
+        usd_subtotal = item_subtotal_rendered
+        usd_subtotal_after_disc = max(0.0, usd_subtotal - global_discount_input)
+        usd_comm_tax = (usd_subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
+        usd_wht_tax = (usd_subtotal_after_disc * (wht_pct / 100.0)) if enable_wht else 0.0
+        usd_grand_total = usd_subtotal_after_disc + usd_comm_tax - usd_wht_tax
+        
+        # MMK Services Portfolio Pipeline
+        mmk_subtotal = ps_price + ms_price
+        mmk_comm_tax = (mmk_subtotal * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
+        mmk_wht_tax = (mmk_subtotal * (wht_pct / 100.0)) if enable_wht else 0.0
+        mmk_grand_total = mmk_subtotal + mmk_comm_tax - mmk_wht_tax
+        
+        # Primary reference parameters for database layout records (save equipment metrics)
+        global_subtotal_calculated = usd_subtotal
+        calculated_grand_total = usd_grand_total
+        comm_tax_amount = usd_comm_tax
+        wht_tax_amount = usd_wht_tax
+        
+        # Render twin distinct output total streams in side telemetry panel
+        st.sidebar.markdown("#### 🛒 Equipment Portfolio (USD)")
+        st.sidebar.markdown(f"**Items Subtotal:** USD {usd_subtotal:,.2f}")
+        if global_discount_input > 0:
+            st.sidebar.markdown(f"**Discount:** -USD {global_discount_input:,.2f}")
+        if enable_commercial_tax:
+            st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +USD {usd_comm_tax:,.2f}")
+        if enable_wht:
+            st.sidebar.markdown(f"**Withholding Tax ({wht_pct}%):** -USD {usd_wht_tax:,.2f}")
+        st.sidebar.markdown(f"### **Grand Total (USD):** USD {usd_grand_total:,.2f}")
+        
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("#### 🛠️ Services Portfolio (MMK)")
+        st.sidebar.markdown(f"**Services Subtotal:** MMK {mmk_subtotal:,.2f}")
+        if enable_commercial_tax:
+            st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +MMK {mmk_comm_tax:,.2f}")
+        if enable_wht:
+            st.sidebar.markdown(f"**Withholding Tax ({wht_pct}%):** -MMK {mmk_wht_tax:,.2f}")
+        st.sidebar.markdown(f"### **Grand Total (MMK):** MMK {mmk_grand_total:,.2f}")
+    else:
+        # Standard Single Currency Pipeline Matrix
+        services_value = ps_price + ms_price
+        if currency_selection == "MMK" and ps_ms_currency == "USD":
+            # Normalize to MMK context matrix
+            services_value = services_value * exchange_rate
+            
+        global_subtotal_calculated = item_subtotal_rendered + services_value
+        subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
+        
+        comm_tax_amount = (subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
+        wht_tax_amount = (subtotal_after_disc * (wht_pct / 100.0)) if enable_wht else 0.0
+        calculated_grand_total = subtotal_after_disc + comm_tax_amount - wht_tax_amount
+        
+        st.sidebar.markdown(f"**Gross Subtotal:** {currency_symbol}{global_subtotal_calculated:,.2f}")
+        if global_discount_input > 0:
+            st.sidebar.markdown(f"**Discount:** -{currency_symbol}{global_discount_input:,.2f}")
+        if enable_commercial_tax:
+            st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +{currency_symbol}{comm_tax_amount:,.2f}")
+        if enable_wht:
+            st.sidebar.markdown(f"**Withholding Tax (WHT) ({wht_pct}%):** -{currency_symbol}{wht_tax_amount:,.2f}")
+        st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
+
+    # Telemetry strings for historical audit
     active_strategies = []
     if enable_commercial_tax: active_strategies.append(f"Commercial Tax ({commercial_tax_pct}%)")
     if enable_wht: active_strategies.append(f"WHT ({wht_pct}%)")
     tax_type_selection = " + ".join(active_strategies) if active_strategies else "None"
     global_tax_pct = commercial_tax_pct if enable_commercial_tax else wht_pct
     calculated_tax = comm_tax_amount + wht_tax_amount
-    
-    st.sidebar.markdown(f"**Gross Subtotal:** {currency_symbol}{global_subtotal_calculated:,.2f}")
-    if enable_commercial_tax:
-        st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +{currency_symbol}{comm_tax_amount:,.2f}")
-    if enable_wht:
-        st.sidebar.markdown(f"**Withholding Tax (WHT) ({wht_pct}%):** -{currency_symbol}{wht_tax_amount:,.2f}")
-    st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
 
     action_c1, action_c2 = st.columns(2)
     if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
@@ -792,14 +843,12 @@ elif page_selection == "➕ Build New Quotation Module":
                 unit_p = raw_base_unit * conversion_multiplier
                 total_p = (raw_base_unit * float(item.get("Qty") or 0)) * conversion_multiplier
                 
-                # --- FOC LOGIC START ---
                 if total_p <= 0:
                     display_total = "FOC"
                     display_unit = "FOC"
                 else:
                     display_total = f"{currency_symbol}{total_p:,.2f}"
                     display_unit = f"{currency_symbol}{unit_p:,.2f}"
-                # --- FOC LOGIC END ---
 
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
@@ -813,11 +862,10 @@ elif page_selection == "➕ Build New Quotation Module":
                 '''
 
         current_service_index = max_main_no
+        srv_symbol = "USD " if ps_ms_currency == "USD" else "MMK "
+        
         if ps_price > 0:
             current_service_index += 1
-            # Fixed: Value already matches currency configuration context
-            ps_total = ps_price
-            # Block Header for Professional Services
             table_rows_html += f'''
             <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
                 <td style="text-align: center; color: #1e293b; padding: 8px;">{current_service_index}</td>
@@ -830,15 +878,12 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-PS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ps_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ps_total:,.2f}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{srv_symbol}{ps_price:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{srv_symbol}{ps_price:,.2f}</td>
             </tr>
             '''
         if ms_price > 0:
             current_service_index += 1
-            # Fixed: Value already matches currency configuration context
-            ms_total = ms_price
-            # Block Header for Maintenance Services
             table_rows_html += f'''
             <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
                 <td style="text-align: center; color: #1e293b; padding: 8px;">{current_service_index}</td>
@@ -851,34 +896,90 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="color: #334155; font-family: monospace; word-break: break-all; padding: 8px;">SRV-ARK-MS</td>
                 <td style="white-space: pre-line; padding-left: 10px; color: #334155; padding: 8px; font-style: italic;">{ms_desc}</td>
                 <td style="text-align: center; color: #334155; padding: 8px;">1</td>
-                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
-                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{currency_symbol}{ms_total:,.2f}</td>
+                <td style="text-align: right; color: #334155; white-space: nowrap; padding: 8px;">{srv_symbol}{ms_price:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{srv_symbol}{ms_price:,.2f}</td>
             </tr>
             '''
 
-        discount_row_markup = ""
-        if global_discount_input > 0:
-            discount_row_markup = f'''
-            <tr>
-                <td style="color: #475569; padding: 4px 0;">Discount Applied:</td>
-                <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{global_discount_input:,.2f}</td>
-            </tr>
+        # --- DUAL VS SINGLE BREAKDOWN BOX BUILDING ---
+        if dual_currency_flow:
+            totals_box_html = f'''
+            <div class="totals-box" style="float: right; width: 45%; margin-top: 5px; page-break-inside: avoid;">
+                <table class="totals-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                    <tr>
+                        <td style="color: #475569; padding: 3px 0; font-weight: bold;">[Equipment Scope - USD]</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #475569; padding: 2px 0; padding-left: 10px;">Items Subtotal:</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap;">USD {usd_subtotal:,.2f}</td>
+                    </tr>
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Discount:</td><td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap;">-USD {global_discount_input:,.2f}</td></tr>' if global_discount_input > 0 else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax ({commercial_tax_pct}%):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+USD {usd_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">WHT ({wht_pct}%):</td><td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap;">-USD {usd_wht_tax:,.2f}</td></tr>' if enable_wht else ''}
+                    <tr class="grand-total-tr" style="background-color: #1e293b; color: white; font-weight: bold;">
+                        <td style="padding: 5px; padding-left: 10px;">Grand Total (Equipment):</td>
+                        <td style="text-align: right; padding: 5px;">USD {usd_grand_total:,.2f}</td>
+                    </tr>
+                    <tr><td colspan="2" style="padding: 4px 0; border-bottom: 1px dashed #cbd5e1;"></td></tr>
+                    <tr>
+                        <td style="color: #475569; padding: 3px 0; font-weight: bold; margin-top: 5px;">[Services Scope - MMK]</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #475569; padding: 2px 0; padding-left: 10px;">Services Subtotal:</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap;">MMK {mmk_subtotal:,.2f}</td>
+                    </tr>
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax ({commercial_tax_pct}%):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+MMK {mmk_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">WHT ({wht_pct}%):</td><td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap;">-MMK {mmk_wht_tax:,.2f}</td></tr>' if enable_wht else ''}
+                    <tr class="grand-total-tr" style="background-color: #00a8e8; color: white; font-weight: bold;">
+                        <td style="padding: 5px; padding-left: 10px;">Grand Total (Services):</td>
+                        <td style="text-align: right; padding: 5px;">MMK {mmk_grand_total:,.2f}</td>
+                    </tr>
+                </table>
+            </div>
             '''
+        else:
+            discount_row_markup = ""
+            if global_discount_input > 0:
+                discount_row_markup = f'''
+                <tr>
+                    <td style="color: #475569; padding: 4px 0;">Discount Applied:</td>
+                    <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{global_discount_input:,.2f}</td>
+                </tr>
+                '''
 
-        tax_row_markup = ""
-        if enable_commercial_tax:
-            tax_row_markup += f'''
-            <tr>
-                <td style="color: #475569; padding: 4px 0;">Commercial Tax ({commercial_tax_pct}%):</td>
-                <td style="text-align: right; font-weight: 600; color: #475569; white-space: nowrap; padding: 4px 0;">+{currency_symbol}{comm_tax_amount:,.2f}</td>
-            </tr>
-            '''
-        if enable_wht:
-            tax_row_markup += f'''
-            <tr>
-                <td style="color: #475569; padding: 4px 0;">Withholding Tax WHT ({wht_pct}%):</td>
-                <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{wht_tax_amount:,.2f}</td>
-            </tr>
+            tax_row_markup = ""
+            if enable_commercial_tax:
+                tax_row_markup += f'''
+                <tr>
+                    <td style="color: #475569; padding: 4px 0;">Commercial Tax ({commercial_tax_pct}%):</td>
+                    <td style="text-align: right; font-weight: 600; color: #475569; white-space: nowrap; padding: 4px 0;">+{currency_symbol}{comm_tax_amount:,.2f}</td>
+                </tr>
+                '''
+            if enable_wht:
+                tax_row_markup += f'''
+                <tr>
+                    <td style="color: #475569; padding: 4px 0;">Withholding Tax WHT ({wht_pct}%):</td>
+                    <td style="text-align: right; font-weight: 600; color: #b91c1c; white-space: nowrap; padding: 4px 0;">-{currency_symbol}{wht_wht_amount:,.2f}</td>
+                </tr>
+                '''
+
+            totals_box_html = f'''
+            <div class="totals-box" style="float: right; width: 40%; margin-top: 5px; page-break-inside: avoid;">
+                <table class="totals-table" style="width: 100%; border-collapse: collapse; font-size: 8.5pt;">
+                    <tr>
+                        <td style="color: #475569; padding: 4px 0;">Gross Subtotal:</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap; padding: 4px 0;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
+                    </tr>
+                    {discount_row_markup}
+                    {tax_row_markup}
+                    <tr class="grand-total-tr" style="background-color: #00a8e8; color: white; font-weight: bold; font-size: 10pt;">
+                        <td style="padding: 8px;">Grand Total:</td>
+                        <td style="text-align: right; white-space: nowrap; padding: 8px;">{currency_symbol}{calculated_grand_total:,.2f}</td>
+                    </tr>
+                </table>
+            </div>
             '''
 
         sig_img_markup = ""
@@ -947,11 +1048,6 @@ elif page_selection == "➕ Build New Quotation Module":
                 .data-table th {{ background-color: #1e293b; color: white; font-weight: 500; text-transform: uppercase; font-size: 8pt; padding: 8px; text-align: left; letter-spacing: 0.3px; }}
                 .data-table td {{ font-size: 8.5pt; border-bottom: 1px solid #f1f5f9; }}
                 
-                .totals-box {{ float: right; width: 40%; margin-top: 5px; page-break-inside: avoid; }}
-                .totals-table {{ width: 100%; border-collapse: collapse; font-size: 8.5pt; }}
-                .grand-total-tr {{ background-color: #00a8e8; color: white; font-weight: bold; font-size: 10pt; }}
-                .grand-total-tr td {{ padding: 8px; }}
-                
                 .footer-terms {{ margin-top: 25px; font-size: 8pt; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; clear: both; line-height: 1.4; }}
                 .signatory-container {{ margin-top: 25px; width: 100%; page-break-inside: avoid; clear: both; }}
                 .signatory-box {{ width: 240px; float: right; text-align: left; font-size: 8.5pt; color: #1e293b; }}
@@ -1014,20 +1110,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tbody>
             </table>
 
-            <div class="totals-box">
-                <table class="totals-table">
-                    <tr>
-                        <td style="color: #475569; padding: 4px 0;">Gross Subtotal:</td>
-                        <td style="text-align: right; font-weight: 600; white-space: nowrap; padding: 4px 0;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
-                    </tr>
-                    {discount_row_markup}
-                    {tax_row_markup}
-                    <tr class="grand-total-tr">
-                        <td>Grand Total:</td>
-                        <td style="text-align: right; white-space: nowrap;">{currency_symbol}{calculated_grand_total:,.2f}</td>
-                    </tr>
-                </table>
-            </div>
+            {totals_box_html}
             <div class="clear"></div>
 
             <div class="footer-terms">
