@@ -708,14 +708,16 @@ elif page_selection == "➕ Build New Quotation Module":
     with srv_c1:
         ps_desc = st.text_area("Professional Service Description", "ARK Implementation Support")
         ps_price_usd = st.number_input("Professional Service (USD)", min_value=0.0, value=0.0)
+        ps_price_mmk = st.number_input("Professional Service (MMK)", min_value=0.0, value=0.0)
         ps_foc = st.checkbox("Professional Service is Free of Charge (FOC)", value=False)
     with srv_c2:
         ms_desc = st.text_area("Maintenance Service Description", "ARK Premium 24/7 Monitoring")
         ms_price_usd = st.number_input("Maintenance Service (USD)", min_value=0.0, value=0.0)
+        ms_price_mmk = st.number_input("Maintenance Service (MMK)", min_value=0.0, value=0.0)
         ms_foc = st.checkbox("Maintenance Service is Free of Charge (FOC)", value=False)
 
     # --- SIDEBAR TAX CONFIGURATION SELECTION MAPPING ---
-    st.sidebar.markdown("### 🏛️ Tax Strategies")
+    st.sidebar.markdown("### 📋 Tax Strategies")
     enable_commercial_tax = st.sidebar.checkbox("Apply Commercial Tax", value=True)
     commercial_tax_pct = 5.0
     if enable_commercial_tax:
@@ -726,13 +728,17 @@ elif page_selection == "➕ Build New Quotation Module":
     if enable_wht:
         wht_pct = st.sidebar.number_input("Withholding Tax (WHT) Factor (%)", min_value=0.0, value=2.0, key="wht_tax_val")
 
-    # Evaluate execution cost paths accounting for FOC bypass options
-    effective_ps_price = 0.0 if ps_foc else ps_price_usd
-    effective_ms_price = 0.0 if ms_foc else ms_price_usd
+    # Evaluate execution cost paths accounting for currency mode selection
+    if currency_selection == "USD":
+        effective_ps_price = 0.0 if ps_foc else ps_price_usd
+        effective_ms_price = 0.0 if ms_foc else ms_price_usd
+    else:
+        effective_ps_price = 0.0 if ps_foc else ps_price_mmk
+        effective_ms_price = 0.0 if ms_foc else ms_price_mmk
 
     # Calculate subtotal using totals already containing conversion values
     item_subtotal_rendered = sum([float(item.get("Total Price") or 0.0) for item in st.session_state.working_items if item.get("Total Price") is not None])
-    global_subtotal_calculated = item_subtotal_rendered + ((effective_ps_price + effective_ms_price) * conversion_multiplier)
+    global_subtotal_calculated = item_subtotal_rendered + effective_ps_price + effective_ms_price
     
     global_discount_input = st.sidebar.number_input(f"Discount ({currency_selection})", min_value=0.0, value=0.0)
     subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
@@ -822,15 +828,15 @@ elif page_selection == "➕ Build New Quotation Module":
                 '''
 
         current_service_index = max_main_no
-        if ps_price_usd > 0 or ps_foc:
+        if (ps_price_usd > 0 or ps_price_mmk > 0) or ps_foc:
             current_service_index += 1
             if ps_foc:
                 ps_display_unit = "FOC"
                 ps_display_total = "FOC"
             else:
-                ps_total = ps_price_usd * conversion_multiplier
-                ps_display_unit = f"{currency_symbol}{ps_total:,.2f}"
-                ps_display_total = f"{currency_symbol}{ps_total:,.2f}"
+                ps_base_price = ps_price_usd if currency_selection == "USD" else ps_price_mmk
+                ps_display_unit = f"{currency_symbol}{ps_base_price:,.2f}"
+                ps_display_total = f"{currency_symbol}{ps_base_price:,.2f}"
 
             # Block Header for Professional Services
             table_rows_html += f'''
@@ -849,15 +855,15 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td style="text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; padding: 8px;">{ps_display_total}</td>
             </tr>
             '''
-        if ms_price_usd > 0 or ms_foc:
+        if (ms_price_usd > 0 or ms_price_mmk > 0) or ms_foc:
             current_service_index += 1
             if ms_foc:
                 ms_display_unit = "FOC"
                 ms_display_total = "FOC"
             else:
-                ms_total = ms_price_usd * conversion_multiplier
-                ms_display_unit = f"{currency_symbol}{ms_total:,.2f}"
-                ms_display_total = f"{currency_symbol}{ms_total:,.2f}"
+                ms_base_price = ms_price_usd if currency_selection == "USD" else ms_price_mmk
+                ms_display_unit = f"{currency_symbol}{ms_base_price:,.2f}"
+                ms_display_total = f"{currency_symbol}{ms_base_price:,.2f}"
 
             # Block Header for Maintenance Services
             table_rows_html += f'''
