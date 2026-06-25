@@ -510,7 +510,6 @@ elif page_selection == "➕ Build New Quotation Module":
     exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, value=3250.0, step=10.0)
     
     currency_symbol = "USD " if currency_selection == "USD" else "MMK "
-    # Note: conversion_multiplier is intentionally ONLY applied during PDF formatting and calculated layout structures.
     conversion_multiplier = exchange_rate if currency_selection == "MMK" else 1.0
     
     st.sidebar.markdown("### 📋 System Template")
@@ -592,7 +591,7 @@ elif page_selection == "➕ Build New Quotation Module":
             st.success(f"Applied a uniform {global_margin_input}% margin setting across all sub-portfolio entries.")
             st.rerun()
 
-    # --- LIVE CALCULATION PIPELINE (Isolated From Live Conversion Alterations) ---
+    # --- LIVE CALCULATION PIPELINE ---
     for item in st.session_state.working_items:
         if not item.get("is_sub", False):
             item["Part Number"] = ""
@@ -602,12 +601,10 @@ elif page_selection == "➕ Build New Quotation Module":
             item["Total Price"] = None
         else:
             qty = float(item.get("Qty") or 0)
-            u_p = float(item.get("Unit Price") or 0.0) # Entered Base Unit Price stays preserved here
+            u_p = float(item.get("Unit Price") or 0.0)
             m_pct = float(item.get("Margin") or 0.0) / 100.0
             final_unit_price = u_p / (1 - m_pct) if m_pct < 1.0 else u_p
             item["Calculated Unit Price Base"] = round(final_unit_price, 2)
-            
-            # Currency conversions are projected ONLY into the row total calculation in real time
             item["Total Price"] = round((final_unit_price * qty) * conversion_multiplier, 2)
 
     blueprint_columns = ["No", "Part Number", "Description", "Qty", "Unit Price", "Margin", "Total Price"]
@@ -737,7 +734,7 @@ elif page_selection == "➕ Build New Quotation Module":
     comm_tax_amount = (subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
     wht_tax_amount = (subtotal_after_disc * (wht_pct / 100.0)) if enable_wht else 0.0
     
-    # Grand total formula handles both adjustments concurrently
+    # Grand total logic handles both adjustments simultaneously
     calculated_grand_total = subtotal_after_disc + comm_tax_amount - wht_tax_amount
     
     # Telemetry data mapping strings for database archival 
@@ -788,7 +785,6 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tr>
                 '''
             else:
-                # Execution calculation rendering rules map baseline values directly across conversion targets
                 raw_base_unit = float(item.get("Calculated Unit Price Base") or 0.0)
                 unit_p = raw_base_unit * conversion_multiplier
                 total_p = (raw_base_unit * float(item.get("Qty") or 0)) * conversion_multiplier
@@ -856,12 +852,11 @@ elif page_selection == "➕ Build New Quotation Module":
             </tr>
             '''
 
-        # Account Manager Signature block generation rules
         sig_img_markup = ""
         if current_user["signature_b64"]:
             sig_img_markup = f'<img src="{current_user["signature_b64"]}" style="max-height: 55px; margin-top: 5px; margin-bottom: 2px; display: block;">'
         else:
-            sig_img_markup = '<div style="height: 45px; margin-top: 5px; color: #cbd5e1; font-style: italic; font-size: 8pt;">Signature Signature Pending</div>'
+            sig_img_markup = '<div style="height: 45px; margin-top: 5px; color: #cbd5e1; font-style: italic; font-size: 8pt;">Signature Pending</div>'
 
         html_document = f"""
         <!DOCTYPE html>
@@ -918,7 +913,6 @@ elif page_selection == "➕ Build New Quotation Module":
                 
                 .clear {{ clear: both; height: 5px; }}
                 
-                /* MILD DARK BLUE HEADER CONFIGURATION */
                 .data-table {{ width: 100%; max-width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; clear: both; table-layout: auto; }}
                 .data-table th {{ background-color: #1e293b; color: white; font-weight: 500; text-transform: uppercase; font-size: 8pt; padding: 8px; text-align: left; letter-spacing: 0.3px; }}
                 .data-table td {{ font-size: 8.5pt; border-bottom: 1px solid #f1f5f9; }}
