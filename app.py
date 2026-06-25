@@ -1159,7 +1159,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 
                 .footer-terms {{ margin-top: 25px; font-size: 8pt; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; clear: both; line-height: 1.4; }}
                /* Layout Fixes applied directly here */
-.signatory-container { 
+.signatory-container {{ 
     margin-top: 25px; 
     width: 100%; 
     page-break-inside: avoid; /* Tells the PDF engine not to slice this block in half */
@@ -1167,15 +1167,15 @@ elif page_selection == "➕ Build New Quotation Module":
     clear: both; 
     display: block; 
     overflow: hidden; 
-}
-.signatory-box { 
+}}
+.signatory-box {{ 
     width: 240px; 
     margin-left: auto; /* Replaces float: right to push the box to the right safely */
     text-align: left; 
     font-size: 8.5pt; 
     color: #1e293b; 
     display: block; 
-}
+}}
   
             </style>
         </head>
