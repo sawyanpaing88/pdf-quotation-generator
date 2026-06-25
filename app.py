@@ -520,6 +520,7 @@ elif page_selection == "➕ Build New Quotation Module":
             u_p = float(item.get("Unit Price") or 0.0)
             m_pct = float(item.get("Margin") or 0.0) / 100.0
             final_unit_price = u_p / (1 - m_pct) if m_pct < 1.0 else u_p
+            item["Calculated Unit Price"] = round(final_unit_price * conversion_multiplier, 2)
             item["Total Price"] = round((final_unit_price * qty) * conversion_multiplier, 2)
 
     # Blueprint definition preventing empty layout crashes
@@ -661,9 +662,9 @@ elif page_selection == "➕ Build New Quotation Module":
             encoded_logo = base64.b64encode(logo_bytes).decode('utf-8')
             mime_type = uploaded_logo_file.type
             logo_src = f"data:{mime_type};base64,{encoded_logo}"
-            logo_html = f'<img src="{logo_src}" style="max-height: 75px; max-width: 220px; object-fit: contain;">'
+            logo_html = f'<img src="{logo_src}" style="max-height: 80px; max-width: 240px; object-fit: contain;">'
         else:
-            logo_html = '<h1 style="color:#00a8e8; margin:0; font-family:\'Helvetica Neue\',Arial;">ARK Premium Solutions</h1>'
+            logo_html = '<h1 style="color:#00a8e8; margin:0 0 5px 0; font-family:\'Helvetica Neue\',Arial; font-size: 26pt; letter-spacing: 0.5px;">ARK PREMIUM SOLUTIONS</h1>'
 
         # --- ADAPTIVE HIERARCHICAL ROW SPAN COMPILER ---
         table_rows_html = ""
@@ -674,19 +675,21 @@ elif page_selection == "➕ Build New Quotation Module":
                 table_rows_html += f'''
                 <tr style="background-color: #edf2f7; font-weight: bold; border-top: 2px solid #cbd5e0;">
                     <td style="text-align: center;">{item.get("No", "")}</td>
-                    <td colspan="4" style="padding-left: 10px; color: #1a202c; font-size: 10pt; letter-spacing: 0.3px;">
+                    <td colspan="5" style="padding-left: 10px; color: #1a202c; font-size: 10pt; letter-spacing: 0.3px;">
                         {item.get("Description", "Main Section")}
                     </td>
                 </tr>
                 '''
             else:
+                unit_p = item.get("Calculated Unit Price") or 0.0
                 total_p = item.get("Total Price") or 0.0
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
                     <td style="text-align: center; color: #718096; font-size: 8.5pt;">{item.get("No", "")}</td>
                     <td style="color: #4a5568; font-family: monospace;">{item.get("Part Number/Model", "")}</td>
-                    <td style="padding-left: 20px; color: #2d3748; font-style: italic;">{item.get("Description", "")}</td>
+                    <td style="padding-left: 15px; color: #2d3748; font-style: italic;">{item.get("Description", "")}</td>
                     <td style="text-align: center;">{item.get("Qty", 1)}</td>
+                    <td style="text-align: right; font-weight: 500; color: #4a5568;">{currency_symbol}{unit_p:,.2f}</td>
                     <td style="text-align: right; font-weight: 600;">{currency_symbol}{total_p:,.2f}</td>
                 </tr>
                 '''
@@ -699,6 +702,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td>SRV-PROF</td>
                 <td>{ps_desc}</td>
                 <td style="text-align: center;">1</td>
+                <td style="text-align: right; color: #4a5568;">{currency_symbol}{ps_total:,.2f}</td>
                 <td style="text-align: right;">{currency_symbol}{ps_total:,.2f}</td>
             </tr>
             '''
@@ -710,6 +714,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 <td>SRV-MGMT</td>
                 <td>{ms_desc}</td>
                 <td style="text-align: center;">1</td>
+                <td style="text-align: right; color: #4a5568;">{currency_symbol}{ms_total:,.2f}</td>
                 <td style="text-align: right;">{currency_symbol}{ms_total:,.2f}</td>
             </tr>
             '''
@@ -736,21 +741,37 @@ elif page_selection == "➕ Build New Quotation Module":
                     font-size: 9.5pt;
                     line-height: 1.6;
                 }}
-                .header-wrapper {{ width: 100%; margin-bottom: 35px; }}
-                .header-left {{ float: left; width: 50%; }}
-                .header-right {{ float: right; width: 50%; text-align: right; font-size: 8.5pt; color: #4a5568; }}
-                .clear {{ clear: both; }}
-                .divider {{ border-bottom: 3px solid #00a8e8; margin-top: 15px; margin-bottom: 25px; }}
+                .header-container {{
+                    text-align: center;
+                    margin-bottom: 25px;
+                    width: 100%;
+                }}
+                .header-logo {{
+                    margin-bottom: 12px;
+                }}
+                .header-address {{
+                    font-size: 8.5pt;
+                    color: #4a5568;
+                    line-height: 1.5;
+                }}
+                .company-group-title {{
+                    font-weight: bold;
+                    color: #1a202c;
+                    font-size: 11pt;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 4px;
+                }}
+                .divider {{ border-bottom: 3px solid #00a8e8; margin-top: 5px; margin-bottom: 25px; }}
                 .doc-title {{ font-size: 24pt; font-weight: bold; color: #1a202c; letter-spacing: -0.5px; margin: 0; }}
                 
                 .meta-table {{ width: 100%; margin-bottom: 30px; table-layout: fixed; }}
                 .meta-table td {{ vertical-align: top; border: none; padding: 0; }}
-                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; min-height: 95px; }}
-                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; min-height: 95px; margin-left: 10px; }}
+                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; min-height: 105px; }}
+                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; min-height: 105px; margin-left: 10px; }}
                 .card-title {{ font-size: 8pt; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }}
                 
                 .data-table {{ width: 100%; border-collapse: collapse; margin-bottom: 25px; }}
-                .data-table th {{ background-color: #1a202c; color: white; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; padding: 10px; text-align: left; }}
+                .data-table th {{ background-color: #1a202c; color: white; font-weight: bold; text-transform: uppercase; font-size: 8pt; padding: 10px; text-align: left; }}
                 .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 9pt; }}
                 
                 .totals-box {{ float: right; width: 40%; margin-top: 10px; }}
@@ -763,14 +784,15 @@ elif page_selection == "➕ Build New Quotation Module":
             </style>
         </head>
         <body>
-            <div class="header-wrapper">
-                <div class="header-left">{logo_html}</div>
-                <div class="header-right">
-                    <strong style="color: #1a202c; font-size: 10pt;">ARK Premium Solutions Co., Ltd.</strong><br>
-                    MICT Park, Block 4, Phase 2, Hlaing Township<br>
-                    Yangon, Myanmar | info@arktechsolutions.net
+            <div class="header-container">
+                <div class="header-logo">{logo_html}</div>
+                <div class="header-address">
+                    <div class="company-group-title">RK CORPORATE GROUP</div>
+                    <strong>ARK Corporate Office :</strong> 12th floor, Times City(office tower-2), Kamayut, Yangon, Myanmar.<br>
+                    <strong>ARK Headquarters Office :</strong> 91, Shwe Taung Kyar 1st Street, Golden Valley 1, Bahan, Yangon, Myanmar.<br>
+                    <strong>ARK Thailand Office :</strong> 1, Soi Ramkhamhaeng 118 Yaek 33-3, Saphan Sung 10240, Bangkok, Thailand.<br>
+                    <strong>Tel:</strong> +95 9 445830101
                 </div>
-                <div class="clear"></div>
             </div>
 
             <div class="divider"></div>
@@ -802,11 +824,12 @@ elif page_selection == "➕ Build New Quotation Module":
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%; text-align: center;">No</th>
-                        <th style="width: 22%;">Part Number / Identifier</th>
-                        <th style="width: 45%;">Functional Itemization Specifications</th>
-                        <th style="width: 8%; text-align: center;">Qty</th>
-                        <th style="width: 17%; text-align: right;">Total Price</th>
+                        <th style="width: 7%; text-align: center;">No</th>
+                        <th style="width: 18%;">Part Number / Identifier</th>
+                        <th style="width: 40%;">Functional Itemization Specifications</th>
+                        <th style="width: 6%; text-align: center;">Qty</th>
+                        <th style="width: 14%; text-align: right;">Unit Price</th>
+                        <th style="width: 15%; text-align: right;">Total Price</th>
                     </tr>
                 </thead>
                 <tbody>
