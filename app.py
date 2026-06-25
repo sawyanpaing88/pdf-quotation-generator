@@ -244,7 +244,7 @@ if not st.session_state.user:
                     if res["is_verified"] == 0:
                         st.error("Account verification code pending clearance.")
                     else:
-                        st.session_state.user = {"id": res["id"], "email": res["email"], "role": res["role"]}
+                        st.session_state.user = {"id": res["id"], "email": res["role"], "role": res["role"]}
                         st.success("Access Granted! Loading your workspace...")
                         st.rerun()
                 else:
@@ -441,8 +441,8 @@ elif page_selection == "➕ Build New Quotation Module":
     currency_selection = st.sidebar.selectbox("Base Output Currency Mode", ["USD", "MMK"])
     exchange_rate = st.sidebar.number_input("Commercial Exchange Rate Value (1 USD to MMK)", min_value=1.0, value=3250.0, step=10.0)
     
-    # SYSTEM CONFIGURATION UNIFIED TEXT DISPLAY (Ks -> MMK Change)
-    currency_symbol = "$" if currency_selection == "USD" else "MMK "
+    # SYSTEM CONFIGURATION UNIFIED TEXT DISPLAY (Ks -> MMK & $ -> USD changes)
+    currency_symbol = "USD " if currency_selection == "USD" else "MMK "
     conversion_multiplier = exchange_rate if currency_selection == "MMK" else 1.0
     
     st.sidebar.markdown("### 📋 System Template")
@@ -534,7 +534,6 @@ elif page_selection == "➕ Build New Quotation Module":
             item["Total Price"] = None
         else:
             qty = float(item.get("Qty") or 0)
-            # RULE: Do not scale or change the Unit Price field inside the live working table when switching currencies
             u_p = float(item.get("Unit Price") or 0.0)
             m_pct = float(item.get("Margin") or 0.0) / 100.0
             final_unit_price = u_p / (1 - m_pct) if m_pct < 1.0 else u_p
@@ -553,7 +552,7 @@ elif page_selection == "➕ Build New Quotation Module":
 
     st.info("💡 **ARK Architecture Rule:** Main rows (e.g., 1, 2) are pure text dividers. Add system units, metrics, and pricing components within Sub-Rows (e.g., 1.1, 1.2).")
 
-    # Live UI Table Setup (Always renders with base configuration input metrics formatting)
+    # Live UI Workspace Grid (Keeps standard formatting inputs isolated)
     edited_df = st.data_editor(
         df_display[blueprint_columns],
         num_rows="dynamic",
@@ -680,6 +679,17 @@ elif page_selection == "➕ Build New Quotation Module":
         else:
             logo_html = '<h1 style="color:#00a8e8; margin:0 0 5px 0; font-family:\'Helvetica Neue\',Arial; font-size: 24pt; letter-spacing: 0.5px;">ARK PREMIUM SOLUTION</h1>'
 
+        # Find highest dynamic table main index integer to compute trailing row numbers sequentially
+        max_main_no = 0
+        for item in st.session_state.working_items:
+            try:
+                val = int(float(item.get("parent_idx", 0)))
+                if val > max_main_no:
+                    max_main_no = val
+            except: pass
+        if max_main_no == 0:
+            max_main_no = 1
+
         # --- HTML ROW POPULATION BUILDER ---
         table_rows_html = ""
         for item in st.session_state.working_items:
@@ -695,7 +705,6 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tr>
                 '''
             else:
-                # Calculate converted prices strictly during execution output for the PDF
                 unit_p = (item.get("Calculated Unit Price Base") or 0.0) * conversion_multiplier
                 total_p = (item.get("Total Price") or 0.0) * conversion_multiplier
                 table_rows_html += f'''
@@ -709,11 +718,14 @@ elif page_selection == "➕ Build New Quotation Module":
                 </tr>
                 '''
 
+        # RULE: Services follow dynamic trailing counter increments sequentially instead of hardcoded strings
+        current_service_index = max_main_no
         if ps_price_usd > 0:
+            current_service_index += 1
             ps_total = ps_price_usd * conversion_multiplier
             table_rows_html += f'''
             <tr style="background-color: #f7fafc; font-weight: 600;">
-                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">{current_service_index}</td>
                 <td>SRV-PROF</td>
                 <td>{ps_desc}</td>
                 <td style="text-align: center;">1</td>
@@ -722,10 +734,11 @@ elif page_selection == "➕ Build New Quotation Module":
             </tr>
             '''
         if ms_price_usd > 0:
+            current_service_index += 1
             ms_total = ms_price_usd * conversion_multiplier
             table_rows_html += f'''
             <tr style="background-color: #f7fafc; font-weight: 600;">
-                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">{current_service_index}</td>
                 <td>SRV-MGMT</td>
                 <td>{ms_desc}</td>
                 <td style="text-align: center;">1</td>
@@ -734,7 +747,6 @@ elif page_selection == "➕ Build New Quotation Module":
             </tr>
             '''
 
-        # RULE 1: If tax is 0%, drop it from rendering inside the totals section markup entirely
         tax_row_markup = ""
         if global_tax_pct > 0:
             tax_row_markup = f'''
@@ -779,7 +791,6 @@ elif page_selection == "➕ Build New Quotation Module":
                     color: #4a5568;
                     line-height: 1.5;
                 }}
-                /* RULE 4: Company Blue Typography Profile Accentuation */
                 .company-group-title {{
                     font-weight: bold;
                     color: #00a8e8;
@@ -793,14 +804,13 @@ elif page_selection == "➕ Build New Quotation Module":
                 .meta-table {{ width: 100%; margin-bottom: 20px; table-layout: fixed; border-collapse: collapse; }}
                 .meta-table td {{ vertical-align: top; border: none; padding: 0; width: 50%; }}
                 
-                /* RULE 5: Exact Box Heights Syncing Safeguard Matrix Constraints */
-                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; height: 135px; min-height: 135px; max-height: 135px; box-sizing: border-box; margin-right: 6px; display: block; overflow: hidden; }}
-                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; height: 135px; min-height: 135px; max-height: 135px; box-sizing: border-box; margin-left: 6px; display: block; overflow: hidden; }}
-                .card-title {{ font-size: 8pt; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }}
+                /* RULE: Fixed Symmetric Sizing Layout with Content Font Scale Autofit Configuration */
+                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; height: 135px; min-height: 135px; max-height: 135px; box-sizing: border-box; margin-right: 6px; display: block; overflow: hidden; font-size: 9pt; }}
+                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; height: 135px; min-height: 135px; max-height: 135px; box-sizing: border-box; margin-left: 6px; display: block; overflow: hidden; font-size: 9pt; }}
+                .card-title {{ font-size: 8pt; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }}
                 
                 .clear {{ clear: both; height: 10px; }}
                 
-                /* RULE 6: Table Column Color Changed to Corporate Dark Blue Header Profile */
                 .data-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; clear: both; }}
                 .data-table th {{ background-color: #0A2540; color: white; font-weight: bold; text-transform: uppercase; font-size: 8pt; padding: 10px; text-align: left; }}
                 .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 9pt; }}
@@ -835,18 +845,19 @@ elif page_selection == "➕ Build New Quotation Module":
                     <td>
                         <div class="card-box">
                             <div class="card-title">Prepared For</div>
-                            <strong style="font-size: 10.5pt; color: #1a202c;">{client_company}</strong><br>
+                            <strong style="font-size: 10pt; color: #1a202c; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{client_company}</strong>
                             Attn: {attn_person}<br>
-                            Email: {attn_email} | Phone: {attn_phone}
+                            Email: {attn_email}<br>
+                            Phone: {attn_phone}
                         </div>
                     </td>
                     <td>
                         <div class="card-box-right">
                             <div class="card-title">Quotation References</div>
-                            <strong>Reference Designator:</strong> {quotation_auto_gen}<br>
-                            <strong>Target Project Scope:</strong> {project_title}<br>
-                            <strong>Issuance Timestamp:</strong> {issue_date.strftime('%Y-%m-%d')}<br>
-                            <strong>Valid Horizon:</strong> {validity_bound}
+                            <strong>Ref:</strong> {quotation_auto_gen}<br>
+                            <strong>Project:</strong> {project_title}<br>
+                            <strong>Date:</strong> {issue_date.strftime('%Y-%m-%d')}<br>
+                            <strong>Validity:</strong> {validity_bound}
                         </div>
                     </td>
                 </tr>
