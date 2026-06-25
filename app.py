@@ -1225,10 +1225,10 @@ elif page_selection == "➕ Build New Quotation Module":
           <div class="footer-terms">
     <strong>Commercial Logistics Terms & Governance Conditions:</strong><br>
 
-    1. Delivery Lead-Time Windows: Equipment delivery windows are anticipated at approximately 
+    1. Delivery Lead-Time: Equipment delivery windows are anticipated at approximately 
     <strong>{lead_time_frame}</strong> start from PO issue date.<br>
 
-    2. Explicit Milestone Commitments: All relative monetary settlement routes must maintain strict compliance with: 
+    2. Payment Terms: All relative monetary settlement routes must maintain strict compliance with: 
     <strong style="color:red;">{payment_terms_desc}</strong>.<br>
 
     3. Additional Execution Scope and Framework Matrix Parameters:<br>
