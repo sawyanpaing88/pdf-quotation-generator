@@ -225,6 +225,7 @@ def parse_pdf_document(uploaded_file):
     return structured_items
 
 if "user" not in st.session_state: st.session_state.user = None
+if "default_logo_base64" not in st.session_state: st.session_state.default_logo_base64 = None
 
 # ==========================================
 # AUTHENTICATION HUB
@@ -288,6 +289,7 @@ st.sidebar.markdown(f"**Authenticated Entity:** `{current_user['email']}`")
 st.sidebar.markdown(f"**Functional Domain Clearance:** `{current_user['role']}`")
 if st.sidebar.button("Logout Session Log"):
     st.session_state.user = None
+    st.session_state.default_logo_base64 = None
     st.rerun()
 
 # Navigation Router
@@ -450,6 +452,13 @@ elif page_selection == "➕ Build New Quotation Module":
     
     st.sidebar.markdown("### 🖼️ Corporate Branding")
     uploaded_logo_file = st.sidebar.file_uploader("Upload Corporate Logo Image", type=["png", "jpg", "jpeg"])
+    
+    # Persistent storage engine for default branding image vectors
+    if uploaded_logo_file is not None:
+        logo_bytes = uploaded_logo_file.getvalue()
+        encoded_logo = base64.b64encode(logo_bytes).decode('utf-8')
+        st.session_state.default_logo_base64 = f"data:{uploaded_logo_file.type};base64,{encoded_logo}"
+        st.sidebar.success("Logo configuration registered as layout default!")
     
     meta_c1, meta_c2, meta_c3 = st.columns(3)
     with meta_c1:
@@ -657,12 +666,9 @@ elif page_selection == "➕ Build New Quotation Module":
         st.success("Draft compiled and archived.")
 
     if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
-        if uploaded_logo_file is not None:
-            logo_bytes = uploaded_logo_file.getvalue()
-            encoded_logo = base64.b64encode(logo_bytes).decode('utf-8')
-            mime_type = uploaded_logo_file.type
-            logo_src = f"data:{mime_type};base64,{encoded_logo}"
-            logo_html = f'<img src="{logo_src}" style="max-height: 80px; max-width: 240px; object-fit: contain;">'
+        # Logo asset loading pipeline fallback checks
+        if st.session_state.default_logo_base64 is not None:
+            logo_html = f'<img src="{st.session_state.default_logo_base64}" style="max-height: 85px; max-width: 250px; object-fit: contain;">'
         else:
             logo_html = '<h1 style="color:#00a8e8; margin:0 0 5px 0; font-family:\'Helvetica Neue\',Arial; font-size: 26pt; letter-spacing: 0.5px;">ARK PREMIUM SOLUTIONS</h1>'
 
@@ -766,8 +772,10 @@ elif page_selection == "➕ Build New Quotation Module":
                 
                 .meta-table {{ width: 100%; margin-bottom: 30px; table-layout: fixed; }}
                 .meta-table td {{ vertical-align: top; border: none; padding: 0; }}
-                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; min-height: 105px; }}
-                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; min-height: 105px; margin-left: 10px; }}
+                
+                /* EXACTLY SYMMETRICAL HEIGHT BOXES */
+                .card-box {{ background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 12px; height: 115px; box-sizing: border-box; }}
+                .card-box-right {{ background-color: #edf2f7; border: 1px solid #cbd5e0; border-radius: 5px; padding: 12px; height: 115px; margin-left: 10px; box-sizing: border-box; }}
                 .card-title {{ font-size: 8pt; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }}
                 
                 .data-table {{ width: 100%; border-collapse: collapse; margin-bottom: 25px; }}
