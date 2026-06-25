@@ -937,7 +937,7 @@ elif page_selection == "➕ Build New Quotation Module":
             
             if not is_sub:
                 table_rows_html += f'''
-                <tr style="background-color: #f8fafc; opacity: 0.1; font-weight: 600; border-top: 1px solid #e2e8f0;">
+                <tr style="background-color: #f8fafc; opacity: 0.2; font-weight: 600; border-top: 1px solid #e2e8f0;">
                     <td style="text-align: center; color: #1e293b; padding: 8px;">{item.get("No", "")}</td>
                     <td colspan="5" style="padding-left: 10px; color: #1e293b; font-size: 8.5pt; padding: 8px;">
                         {item.get("Description", "Main Section")}
