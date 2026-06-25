@@ -1182,7 +1182,7 @@ elif page_selection == "➕ Build New Quotation Module":
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    opacity: 0.15; /* Adjust between 0.05 and 0.2 for best results */
+    opacity: 0.05; /* Adjust between 0.05 and 0.2 for best results */
     z-index: -1000; /* Ensures it stays behind text */
     width: 400px;   /* Adjust width as needed */
     pointer-events: none; /* Allows text selection through the logo */
