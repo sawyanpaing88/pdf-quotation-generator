@@ -1190,6 +1190,9 @@ elif page_selection == "➕ Build New Quotation Module":
             </style>
         </head>
         <body>
+         <div class="watermark">
+        {f'<img src="{st.session_state.default_logo_base64}" style="width: 100%;">' if st.session_state.default_logo_base64 else ""}
+    </div>
             <div class="header-container">
                 <div class="header-logo">{logo_html}</div>
                 <div class="header-address">
