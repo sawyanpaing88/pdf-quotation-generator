@@ -950,8 +950,8 @@ elif page_selection == "➕ Build New Quotation Module":
                 total_p = (raw_base_unit * float(item.get("Qty") or 0)) * conversion_multiplier
                 
                 if total_p <= 0:
-                    display_total = "FOC"
-                    display_unit = "FOC"
+                    display_total = "INC"
+                    display_unit = "INC"
                 else:
                     display_total = f"{currency_symbol}{total_p:,.2f}"
                     display_unit = f"{currency_symbol}{unit_p:,.2f}"
