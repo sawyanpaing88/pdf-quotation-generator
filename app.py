@@ -1231,7 +1231,9 @@ elif page_selection == "➕ Build New Quotation Module":
             <strong style="color:red;">{payment_terms_desc}</strong>.<br>
 
             3. Additional Execution Scope and Framework Matrix Parameters:<br>
-            <span style="color:#003366;">{terms_html}</span>
+        <span style="color:#003366; margin-left:20px;">
+            • {terms_and_cond.replace('\n', '<br>• ')}
+            </span>
         </div>
 
             <div class="signatory-container">
