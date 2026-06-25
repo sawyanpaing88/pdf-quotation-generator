@@ -244,7 +244,7 @@ if not st.session_state.user:
                     if res["is_verified"] == 0:
                         st.error("Account verification code pending clearance.")
                     else:
-                        st.session_state.user = {"id": res["id"], "email": res["role"], "role": res["role"]}
+                        st.session_state.user = {"id": res["id"], "email": res["email"], "role": res["role"]}
                         st.success("Access Granted! Loading your workspace...")
                         st.rerun()
                 else:
@@ -707,11 +707,11 @@ elif page_selection == "➕ Build New Quotation Module":
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
                     <td style="text-align: center; color: #718096;">{item.get("No", "")}</td>
-                    <td style="color: #4a5568; font-family: monospace;">{item.get("Part Number/Model", "")}</td>
-                    <td style="padding-left: 15px; color: #2d3748; font-style: italic;">{item.get("Description", "")}</td>
+                    <td style="color: #4a5568; font-family: monospace; word-break: break-all;">{item.get("Part Number/Model", "")}</td>
+                    <td style="padding-left: 15px; color: #2d3748; font-style: italic; word-break: break-word;">{item.get("Description", "")}</td>
                     <td style="text-align: center;">{item.get("Qty", 1)}</td>
-                    <td style="text-align: right; font-weight: 500; color: #4a5568;">{currency_symbol}{unit_p:,.2f}</td>
-                    <td style="text-align: right; font-weight: 600;">{currency_symbol}{total_p:,.2f}</td>
+                    <td style="text-align: right; font-weight: 500; color: #4a5568; white-space: nowrap;">{currency_symbol}{unit_p:,.2f}</td>
+                    <td style="text-align: right; font-weight: 600; white-space: nowrap;">{currency_symbol}{total_p:,.2f}</td>
                 </tr>
                 '''
 
@@ -719,15 +719,14 @@ elif page_selection == "➕ Build New Quotation Module":
         if ps_price_usd > 0:
             current_service_index += 1
             ps_total = ps_price_usd * conversion_multiplier
-            # Replaced <br> logic safely via inline styled cell with word-wrap architecture
             table_rows_html += f'''
             <tr style="background-color: #f7fafc; font-weight: 600;">
                 <td style="text-align: center;">{current_service_index}</td>
-                <td>SRV-ARK-PS</td>
-                <td style="white-space: pre-line; padding-left: 15px;">{ps_desc}</td>
+                <td style="word-break: break-all;">SRV-ARK-PS</td>
+                <td style="white-space: pre-line; padding-left: 15px; word-break: break-word;">{ps_desc}</td>
                 <td style="text-align: center;">1</td>
-                <td style="text-align: right; color: #4a5568;">{currency_symbol}{ps_total:,.2f}</td>
-                <td style="text-align: right;">{currency_symbol}{ps_total:,.2f}</td>
+                <td style="text-align: right; color: #4a5568; white-space: nowrap;">{currency_symbol}{ps_total:,.2f}</td>
+                <td style="text-align: right; white-space: nowrap;">{currency_symbol}{ps_total:,.2f}</td>
             </tr>
             '''
         if ms_price_usd > 0:
@@ -736,11 +735,11 @@ elif page_selection == "➕ Build New Quotation Module":
             table_rows_html += f'''
             <tr style="background-color: #f7fafc; font-weight: 600;">
                 <td style="text-align: center;">{current_service_index}</td>
-                <td>SRV-ARK-MS</td>
-                <td style="white-space: pre-line; padding-left: 15px;">{ms_desc}</td>
+                <td style="word-break: break-all;">SRV-ARK-MS</td>
+                <td style="white-space: pre-line; padding-left: 15px; word-break: break-word;">{ms_desc}</td>
                 <td style="text-align: center;">1</td>
-                <td style="text-align: right; color: #4a5568;">{currency_symbol}{ms_total:,.2f}</td>
-                <td style="text-align: right;">{currency_symbol}{ms_total:,.2f}</td>
+                <td style="text-align: right; color: #4a5568; white-space: nowrap;">{currency_symbol}{ms_total:,.2f}</td>
+                <td style="text-align: right; white-space: nowrap;">{currency_symbol}{ms_total:,.2f}</td>
             </tr>
             '''
 
@@ -750,7 +749,7 @@ elif page_selection == "➕ Build New Quotation Module":
             discount_row_markup = f'''
             <tr>
                 <td style="color: #4a5568;">Discount Applied:</td>
-                <td style="text-align: right; font-weight: 600; color: #e53e3e;">-{currency_symbol}{global_discount_input:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; color: #e53e3e; white-space: nowrap;">-{currency_symbol}{global_discount_input:,.2f}</td>
             </tr>
             '''
 
@@ -759,7 +758,7 @@ elif page_selection == "➕ Build New Quotation Module":
             tax_row_markup = f'''
             <tr>
                 <td style="color: #4a5568;">Tax Configuration ({global_tax_pct}%):</td>
-                <td style="text-align: right; font-weight: 600;">{currency_symbol}{calculated_tax:,.2f}</td>
+                <td style="text-align: right; font-weight: 600; white-space: nowrap;">{currency_symbol}{calculated_tax:,.2f}</td>
             </tr>
             '''
 
@@ -784,6 +783,7 @@ elif page_selection == "➕ Build New Quotation Module":
                     color: #2d3748;
                     font-size: 9.5pt;
                     line-height: 1.6;
+                    width: 100%;
                 }}
                 .header-container {{
                     text-align: center;
@@ -817,12 +817,12 @@ elif page_selection == "➕ Build New Quotation Module":
                 
                 .clear {{ clear: both; height: 10px; }}
                 
-                /* GLOBAL FONT SCALING / WORD-BREAK PROTECTION ENFORCED ACROSS ALL COLUMNS */
-                .data-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; clear: both; table-layout: fixed; }}
-                .data-table th {{ background-color: #0A2540; color: white; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; padding: 10px; text-align: left; word-wrap: break-word; }}
-                .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 8.5pt; word-wrap: break-word; overflow-wrap: break-word; }}
+                /* IMPROVED LIQUID LAYOUT WITH EXPLICIT WRAPPING FOR WEASYPRINT */
+                .data-table {{ width: 100%; max-width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; clear: both; table-layout: auto; }}
+                .data-table th {{ background-color: #0A2540; color: white; font-weight: bold; text-transform: uppercase; font-size: 8.5pt; padding: 10px; text-align: left; }}
+                .data-table td {{ padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 8.5pt; }}
                 
-                .totals-box {{ float: right; width: 40%; margin-top: 10px; page-break-inside: avoid; }}
+                .totals-box {{ float: right; width: 45%; margin-top: 10px; page-break-inside: avoid; }}
                 .totals-table {{ width: 100%; border-collapse: collapse; }}
                 .totals-table td {{ padding: 6px 8px; font-size: 9.5pt; }}
                 .grand-total-tr {{ background-color: #00a8e8; color: white; font-weight: bold; font-size: 11pt; }}
@@ -875,12 +875,12 @@ elif page_selection == "➕ Build New Quotation Module":
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 7%; text-align: center;">No</th>
-                        <th style="width: 20%;">Part Number / Identifier</th>
-                        <th style="width: 38%;">Functional Itemization Specifications</th>
-                        <th style="width: 6%; text-align: center;">Qty</th>
-                        <th style="width: 14%; text-align: right;">Unit Price</th>
-                        <th style="width: 15%; text-align: right;">Total Price</th>
+                        <th style="width: 6%; text-align: center;">No</th>
+                        <th style="width: 24%;">Part Number / Identifier</th>
+                        <th style="width: 40%;">Functional Itemization Specifications</th>
+                        <th style="width: 5%; text-align: center;">Qty</th>
+                        <th style="width: 12%; text-align: right;">Unit Price</th>
+                        <th style="width: 13%; text-align: right;">Total Price</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -892,13 +892,13 @@ elif page_selection == "➕ Build New Quotation Module":
                 <table class="totals-table">
                     <tr>
                         <td style="color: #4a5568;">Gross Subtotal:</td>
-                        <td style="text-align: right; font-weight: 600;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
+                        <td style="text-align: right; font-weight: 600; white-space: nowrap;">{currency_symbol}{global_subtotal_calculated:,.2f}</td>
                     </tr>
                     {discount_row_markup}
                     {tax_row_markup}
                     <tr class="grand-total-tr">
                         <td>Grand Total:</td>
-                        <td style="text-align: right;">{currency_symbol}{calculated_grand_total:,.2f}</td>
+                        <td style="text-align: right; white-space: nowrap;">{currency_symbol}{calculated_grand_total:,.2f}</td>
                     </tr>
                 </table>
             </div>
