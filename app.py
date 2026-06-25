@@ -111,13 +111,16 @@ def parse_uploaded_document(df_raw):
     if df_raw.empty:
         return structured_items
 
+    # Soft-align columns to handle variations safely
+    df_raw.columns = [str(c).strip() for c in df_raw.columns]
+    
     sample_rows = df_raw.head(10).astype(str)
     desc_col = sample_rows.apply(lambda x: x.str.len().max()).idxmax()
     
     qty_col = None
     price_col = None
     for col in df_raw.columns:
-        col_lower = str(col).lower()
+        col_lower = col.lower()
         if 'qty' in col_lower or 'quant' in col_lower:
             qty_col = col
         elif 'price' in col_lower or 'rate' in col_lower or 'unit' in col_lower:
@@ -129,7 +132,6 @@ def parse_uploaded_document(df_raw):
             continue
             
         row_no_raw = str(row.get("No", idx + 1)).strip()
-        
         if row_no_raw.endswith(".0"):
             row_no = row_no_raw.split(".")[0]  
             is_sub_row = False                  
@@ -435,7 +437,7 @@ elif page_selection == "➕ Build New Quotation Module":
     st.sidebar.markdown("### 📋 System Template")
     sample_df = pd.DataFrame({
         "No": ["1", "1.1", "1.2", "2"],
-        "Part Number": ["", "C9300-48TX-E", "STACK-M-50CM", ""],
+        "Part Number/Model": ["", "C9300-48TX-E", "STACK-M-50CM", ""],
         "Description": ["Cisco Core Router Stack Frame", "Catalyst 9300 48-port Data Only", "Cisco Catalyst 9300 Stack Cable 50CM", "ARK Professional Services Division"],
         "Qty": [0, 1, 1, 0],
         "Unit Price": [0.0, 4500.00, 250.00, 0.0]
@@ -507,7 +509,7 @@ elif page_selection == "➕ Build New Quotation Module":
             st.success(f"Applied a uniform {global_margin_input}% margin setting across all sub-portfolio entries.")
             st.rerun()
 
-    # --- UPDATED CALCULATION ENGINE ---
+    # --- MATH ENGINE PIPELINE ---
     for item in st.session_state.working_items:
         if not item.get("is_sub", False):
             item["Qty"] = 0
