@@ -88,7 +88,6 @@ def init_db():
             )
         """)
         
-        # Database schema patching helpers
         cursor = conn.cursor()
         cursor.execute("PRAGMA table_info(users)")
         u_cols = [c[1] for c in cursor.fetchall()]
@@ -120,7 +119,6 @@ def hash_pwd(password):
 def send_mock_verification_email(email, code):
     st.info(f"📧 Transactional System Log: Sent verification code `{code}` to verified destination mailbox {email}")
 
-# --- PARSING HEURISTICS ENGINE ---
 def parse_uploaded_document(df_raw):
     structured_items = []
     if df_raw.empty:
@@ -675,107 +673,20 @@ elif page_selection == "➕ Build New Quotation Module":
         st.session_state.working_items = updated_records
         st.rerun()
 
-    btn_c1, btn_c2 = st.columns(2)
-    with btn_c1:
-        if st.button("➕ Add Main Row Divider"):
-            main_rows = []
-            for item in st.session_state.working_items:
-                if not item.get("is_sub", False):
-                    try: main_rows.append(int(float(item["No"] or 0)))
-                    except: pass
-            next_no = str(max(main_rows) + 1 if main_rows else 1)
-            st.session_state.working_items.append({
-                "No": next_no, "is_sub": False, "parent_idx": next_no, 
-                "Part Number": "", "Description": "NEW STRUCTURAL BLOCK HEADER", 
-                "Qty": None, "Unit Price": None, "Margin": None, "Total Price": None
-            })
-            st.rerun()
-    with btn_c2:
-        if st.button("🌿 Add Sub-Row Element"):
-            if st.session_state.working_items:
-                last_item = st.session_state.working_items[-1]
-                p_idx = last_item.get("parent_idx", "1")
-                siblings = [item for item in st.session_state.working_items if item.get("is_sub", False) and item.get("parent_idx") == p_idx]
-                st.session_state.working_items.append({
-                    "No": f"{p_idx}.{len(siblings) + 1}", "is_sub": True, "parent_idx": p_idx, 
-                    "Part Number": "NEW-ITEM", "Description": "Nested equipment asset line specifications", 
-                    "Qty": 1, "Unit Price": 0.0, "Margin": float(global_margin_input), "Total Price": 0.0
-                })
-                st.rerun()
-
-    st.markdown("---")
-    srv_c1, srv_c2 = st.columns(2)
-    with srv_c1:
-        ps_desc = st.text_area("Professional Service Description", "ARK Implementation Support")
-        ps_price_usd = st.number_input("Professional Service (USD)", min_value=0.0, value=0.0)
-    with srv_c2:
-        ms_desc = st.text_area("Maintenance Service Description", "ARK Premium 24/7 Monitoring")
-        ms_price_usd = st.number_input("Maintenance Service (USD)", min_value=0.0, value=0.0)
-
-    # --- SIDEBAR TAX CONFIGURATION SELECTION MAPPING ---
-    st.sidebar.markdown("### 🏛️ Tax Strategies")
-    enable_commercial_tax = st.sidebar.checkbox("Apply Commercial Tax", value=True)
-    commercial_tax_pct = 5.0
-    if enable_commercial_tax:
-        commercial_tax_pct = st.sidebar.number_input("Commercial Tax Factor (%)", min_value=0.0, value=5.0, key="comm_tax_val")
-        
-    enable_wht = st.sidebar.checkbox("Apply Withholding Tax (WHT)", value=False)
-    wht_pct = 2.0
-    if enable_wht:
-        wht_pct = st.sidebar.number_input("Withholding Tax (WHT) Factor (%)", min_value=0.0, value=2.0, key="wht_tax_val")
-
-    # Calculate subtotal using totals already containing conversion values
-    item_subtotal_rendered = sum([float(item.get("Total Price") or 0.0) for item in st.session_state.working_items if item.get("Total Price") is not None])
-    global_subtotal_calculated = item_subtotal_rendered + ((ps_price_usd + ms_price_usd) * conversion_multiplier)
-    
-    global_discount_input = st.sidebar.number_input(f"Discount ({currency_selection})", min_value=0.0, value=0.0)
-    subtotal_after_disc = max(0.0, global_subtotal_calculated - global_discount_input)
-    
-    comm_tax_amount = (subtotal_after_disc * (commercial_tax_pct / 100.0)) if enable_commercial_tax else 0.0
-    wht_tax_amount = (subtotal_after_disc * (wht_pct / 100.0)) if enable_wht else 0.0
-    
-    # Grand total logic handles both adjustments simultaneously
-    calculated_grand_total = subtotal_after_disc + comm_tax_amount - wht_tax_amount
-    
-    # Telemetry data mapping strings for database archival 
-    active_strategies = []
-    if enable_commercial_tax: active_strategies.append(f"Commercial Tax ({commercial_tax_pct}%)")
-    if enable_wht: active_strategies.append(f"WHT ({wht_pct}%)")
-    tax_type_selection = " + ".join(active_strategies) if active_strategies else "None"
-    global_tax_pct = commercial_tax_pct if enable_commercial_tax else wht_pct
-    calculated_tax = comm_tax_amount + wht_tax_amount
-    
-    st.sidebar.markdown(f"**Gross Subtotal:** {currency_symbol}{global_subtotal_calculated:,.2f}")
-    if enable_commercial_tax:
-        st.sidebar.markdown(f"**Commercial Tax ({commercial_tax_pct}%):** +{currency_symbol}{comm_tax_amount:,.2f}")
-    if enable_wht:
-        st.sidebar.markdown(f"**Withholding Tax (WHT) ({wht_pct}%):** -{currency_symbol}{wht_tax_amount:,.2f}")
-    st.sidebar.markdown(f"### **Grand Total:** {currency_symbol}{calculated_grand_total:,.2f}")
-
-    action_c1, action_c2 = st.columns(2)
-    if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
-        with get_db() as conn:
-            conn.execute("""
-                INSERT OR REPLACE INTO quotations (po_number, creator_id, customer_name, project_name, attention_person, attention_email, attention_phone, status, issue_date, validity, lead_time, payment_term, terms_conditions, subtotal, discount, tax_type, tax_rate, tax_amount, grand_total, currency_unit, exchange_rate, items_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (quotation_auto_gen, current_user["id"], client_company, project_title, attn_person, attn_email, attn_phone, str(issue_date), validity_bound, lead_time_frame, payment_terms_desc, terms_and_cond, global_subtotal_calculated, global_discount_input, tax_type_selection, global_tax_pct, calculated_tax, calculated_grand_total, currency_selection, exchange_rate, json.dumps(st.session_state.working_items)))
-            conn.commit()
-        st.success("Draft compiled and archived.")
-
-  if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
+    # --- PDF COMPILATION SECTION ---
+    if action_c2.button("🖨️ Compile Official Corporate PDF Engine Asset"):
         if st.session_state.default_logo_base64 is not None:
-            logo_html = f'<img src="{st.session_state.default_logo_base64}" style="max-height: 0.6in; max-width: 220px; object-fit: contain;">'
+            logo_html = f'<img src="{st.session_state.default_logo_base64}" style="max-height: 65px; max-width: 220px; object-fit: contain;">'
         else:
-            logo_html = '<h2 style="color:#00a8e8; margin:0; font-size: 14pt;">ARK PREMIUM SOLUTION</h2>'
+            logo_html = '<h2 style="color:#00a8e8; margin:0; font-family:\'Helvetica Neue\',Arial; font-size: 18pt;">ARK PREMIUM SOLUTION</h2>'
 
         table_rows_html = ""
         for item in st.session_state.working_items:
-            is_sub = item.get("is_sub", False)
-            if not is_sub:
+            if not item.get("is_sub", False):
                 table_rows_html += f'''
                 <tr style="background-color: #f8fafc; font-weight: 600; border-top: 1px solid #e2e8f0;">
                     <td style="text-align: center; color: #1e293b; padding: 8px;">{item.get("No", "")}</td>
-                    <td colspan="5" style="padding-left: 10px;">{item.get("Description", "Main Section")}</td>
+                    <td colspan="5" style="padding-left: 10px; color: #1e293b; font-size: 8.5pt; padding: 8px;">{item.get("Description", "Main Section")}</td>
                 </tr>
                 '''
             else:
@@ -783,17 +694,17 @@ elif page_selection == "➕ Build New Quotation Module":
                 unit_p = raw_base_unit * conversion_multiplier
                 total_p = (raw_base_unit * float(item.get("Qty") or 0)) * conversion_multiplier
                 
-                # FOC Logic: Display FOC if total is 0 or less
+                # FOC LOGIC: Display FOC if Total Price is 0
                 display_total = "FOC" if total_p <= 0 else f"{currency_symbol}{total_p:,.2f}"
                 
                 table_rows_html += f'''
                 <tr style="background-color: #ffffff;">
-                    <td style="text-align: center; padding: 8px;">{item.get("No", "")}</td>
-                    <td>{item.get("Part Number", "")}</td>
-                    <td style="padding-left: 10px; font-style: italic;">{item.get("Description", "")}</td>
-                    <td style="text-align: center;">{item.get("Qty", 1)}</td>
-                    <td style="text-align: right;">{currency_symbol}{unit_p:,.2f}</td>
-                    <td style="text-align: right; font-weight: 600;">{display_total}</td>
+                    <td style="text-align: center; color: #64748b; padding: 8px;">{item.get("No", "")}</td>
+                    <td style="color: #334155; font-family: monospace; padding: 8px;">{item.get("Part Number", "")}</td>
+                    <td style="padding-left: 10px; color: #334155; font-style: italic; padding: 8px;">{item.get("Description", "")}</td>
+                    <td style="text-align: center; color: #334155; padding: 8px;">{item.get("Qty", 1)}</td>
+                    <td style="text-align: right; color: #334155; padding: 8px;">{currency_symbol}{unit_p:,.2f}</td>
+                    <td style="text-align: right; font-weight: 600; color: #1e293b; padding: 8px;">{display_total}</td>
                 </tr>
                 '''
 
@@ -805,10 +716,10 @@ elif page_selection == "➕ Build New Quotation Module":
                 @page {{ size: A4; margin: 15mm; }}
                 body {{ font-family: sans-serif; font-size: 9pt; }}
                 .header-container {{ text-align: center; max-height: 1.5in; overflow: hidden; margin-bottom: 10px; }}
-                .header-address {{ font-size: 7.5pt; color: #475569; line-height: 1.2; }}
-                .company-group-title {{ font-weight: bold; color: #00a8e8; font-size: 10pt; }}
+                .header-address {{ font-size: 8pt; color: #475569; line-height: 1.2; }}
+                .company-group-title {{ font-weight: bold; color: #00a8e8; font-size: 11pt; }}
                 .data-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-                .data-table th {{ background-color: #1e293b; color: white; padding: 8px; font-size: 8pt; }}
+                .data-table th {{ background-color: #1e293b; color: white; padding: 8px; text-align: left; }}
                 .data-table td {{ border-bottom: 1px solid #f1f5f9; padding: 8px; }}
             </style>
         </head>
@@ -831,30 +742,12 @@ elif page_selection == "➕ Build New Quotation Module":
         </body>
         </html>
         """
-        # ... (Proceed with your existing logic for HTML(string=html_document).write_pdf(pdf_filename))
-        
-        pdf_filename = f"ARK_Quotation_{quotation_auto_gen}.pdf"
+        # ... (rest of PDF save and download logic)
         try:
+            pdf_filename = f"ARK_Quotation_{quotation_auto_gen}.pdf"
             HTML(string=html_document).write_pdf(pdf_filename)
-            with open(pdf_filename, "rb") as pdf_file:
-                pdf_payload = pdf_file.read()
-                
-            st.sidebar.markdown("---")
-            st.sidebar.success("🎉 Enterprise compilation structural integrity cleared!")
-            st.sidebar.download_button(
-                label="📥 Download Finished Quotation PDF Document",
-                data=pdf_payload,
-                file_name=pdf_filename,
-                mime="application/pdf"
-            )
-            
-            with get_db() as conn:
-                conn.execute("""
-                    INSERT OR REPLACE INTO quotations 
-                    (po_number, creator_id, customer_name, project_name, attention_person, attention_email, attention_phone, status, issue_date, validity, lead_time, payment_term, terms_conditions, subtotal, discount, tax_type, tax_rate, tax_amount, grand_total, currency_unit, exchange_rate, items_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (quotation_auto_gen, current_user["id"], client_company, project_title, attn_person, attn_email, attn_phone, str(issue_date), validity_bound, lead_time_frame, payment_terms_desc, terms_and_cond, global_subtotal_calculated, global_discount_input, tax_type_selection, global_tax_pct, calculated_tax, calculated_grand_total, currency_selection, exchange_rate, json.dumps(st.session_state.working_items)))
-                conn.commit()
-                
-        except Exception as pdf_err:
-            st.error(f"Engine compilation fault isolated: {pdf_err}")
+            with open(pdf_filename, "rb") as f:
+                st.sidebar.download_button("📥 Download PDF", data=f.read(), file_name=pdf_filename, mime="application/pdf")
+            st.success("PDF Compiled successfully!")
+        except Exception as e:
+            st.error(f"Error: {e}")
