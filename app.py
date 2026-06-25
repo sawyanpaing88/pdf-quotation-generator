@@ -1158,8 +1158,24 @@ elif page_selection == "➕ Build New Quotation Module":
                 .data-table td {{ font-size: 8.5pt; border-bottom: 1px solid #f1f5f9; }}
                 
                 .footer-terms {{ margin-top: 25px; font-size: 8pt; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; clear: both; line-height: 1.4; }}
-                .signatory-container {{ margin-top: 25px; width: 100%; page-break-inside: avoid; clear: both; }}
-                .signatory-box {{ width: 240px; float: right; text-align: left; page-break-inside: avoid; font-size: 8.5pt; color: #1e293b; }}
+               /* Layout Fixes applied directly here */
+.signatory-container { 
+    margin-top: 25px; 
+    width: 100%; 
+    page-break-inside: avoid; /* Tells the PDF engine not to slice this block in half */
+    break-inside: avoid; 
+    clear: both; 
+    display: block; 
+    overflow: hidden; 
+}
+.signatory-box { 
+    width: 240px; 
+    margin-left: auto; /* Replaces float: right to push the box to the right safely */
+    text-align: left; 
+    font-size: 8.5pt; 
+    color: #1e293b; 
+    display: block; 
+}
   
             </style>
         </head>
@@ -1239,19 +1255,19 @@ elif page_selection == "➕ Build New Quotation Module":
 </div>
 
             <div class="signatory-container">
-                <div class="signatory-box">
-                    <div style="border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
-                        <span style="font-size: 7.5pt; font-weight: bold; color: #64748b; text-transform: uppercase; display: block;">Issued & Authorized By:</span>
-                        {sig_img_markup}
-                    </div>
-                    <div style="margin-top: 6px; font-weight: bold; color: #0f172a; font-size: 9.5pt;">{current_user["name"] or "Authorized Signatory"}</div>
-                    <div style="color: #475569; font-size: 8.5pt; font-weight: 500; margin-top: 2px;">{current_user["designation"] or "Account Operations Manager"}</div>
-                    <div style="color: #64748b; font-size: 8pt; margin-top: 4px; line-height: 1.4;">
-                        Email: {current_user["email"]}<br>
-                        Phone: {current_user["phone"] or "N/A"}
-                    </div>
-                </div>
-            </div>
+    <div class="signatory-box">
+        <div style="border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
+            <span style="font-size: 7.5pt; font-weight: bold; color: #64748b; text-transform: uppercase; display: block;">Issued & Authorized By:</span>
+            {sig_img_markup}
+        </div>
+        <div style="margin-top: 6px; font-weight: bold; color: #0f172a; font-size: 9.5pt;">{current_user["name"] or "Authorized Signatory"}</div>
+        <div style="color: #475569; font-size: 8.5pt; font-weight: 500; margin-top: 2px;">{current_user["designation"] or "Account Operations Manager"}</div>
+        <div style="color: #64748b; font-size: 8pt; margin-top: 4px; line-height: 1.4;">
+            Email: {current_user["email"]}<br>
+            Phone: {current_user["phone"] or "N/A"}
+        </div>
+    </div>
+</div>
         </body>
         </html>
         """
