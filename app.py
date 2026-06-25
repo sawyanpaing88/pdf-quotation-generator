@@ -906,11 +906,7 @@ elif page_selection == "➕ Build New Quotation Module":
         "global_discount_input": global_discount_input
     }
     extended_meta_json_str = json.dumps(extended_meta_payload)
-    #My test
-    terms_html = "<br>".join(
-    [f"• {term}" for term in terms_and_cond.split('\n') if term.strip()]
-)
-    
+
     action_c1, action_c2 = st.columns(2)
     if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
         with get_db() as conn:
