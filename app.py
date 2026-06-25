@@ -1158,8 +1158,22 @@ elif page_selection == "➕ Build New Quotation Module":
                 .data-table td {{ font-size: 8.5pt; border-bottom: 1px solid #f1f5f9; }}
                 
                 .footer-terms {{ margin-top: 25px; font-size: 8pt; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; clear: both; line-height: 1.4; }}
-                .signatory-container {{ margin-top: 25px; width: 100%; page-break-inside: avoid; clear: both; }}
-                .signatory-box {{ width: 240px; float: right; text-align: left; font-size: 8.5pt; color: #1e293b; }}
+            // #   .signatory-container {{ margin-top: 25px; width: 100%; page-break-inside: avoid; clear: both; }}
+            // #   .signatory-box {{ width: 240px; float: right; text-align: left; font-size: 8.5pt; color: #1e293b; }}
+    .signatory-container {
+    margin-top: 25px;
+    width: 100%;
+    page-break-inside: avoid;
+    clear: both;
+}
+
+.signatory-box {
+    width: 240px;
+    float: right;
+    text-align: left;
+    font-size: 8.5pt;
+    color: #1e293b;
+}
             </style>
         </head>
         <body>
@@ -1220,7 +1234,9 @@ elif page_selection == "➕ Build New Quotation Module":
             </table>
 
             {totals_box_html}
-            <div class="clear"></div>
+            <div class="clear">
+            
+            </div>
 
           <div class="footer-terms">
     <strong>Commercial Logistics Terms & Governance Conditions:</strong><br>
