@@ -967,7 +967,7 @@ elif page_selection == "➕ Build New Quotation Module":
             </div>
 
             <div class="divider"></div>
-            <h2 class="doc-title">Commercial Quotation</h2>
+            <h2 class="doc-title">Quotation</h2>
             <br>
 
             <table class="meta-table">
