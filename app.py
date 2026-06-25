@@ -1031,7 +1031,7 @@ elif page_selection == "➕ Build New Quotation Module":
                         <td style="color: #475569; padding: 2px 0; padding-left: 10px;">Services Subtotal:</td>
                         <td style="text-align: right; font-weight: 600; white-space: nowrap;">MMK {mmk_subtotal:,.2f}</td>
                     </tr>
-                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax ({commercial_tax_pct}%):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+MMK {mmk_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
+                    {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Commercial Tax (CT):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+MMK {mmk_comm_tax:,.2f}</td></tr>' if enable_commercial_tax else ''}
                     {f'<tr><td style="color: #475569; padding: 2px 0; padding-left: 10px;">Withholding Tax (WHT):</td><td style="text-align: right; font-weight: 600; white-space: nowrap;">+MMK {mmk_wht_tax:,.2f}</td></tr>' if enable_wht else ''}
                     <tr class="grand-total-tr" style="background-color: #00a8e8; color: white; font-weight: bold;">
                         <td style="padding: 5px; padding-left: 10px;">Grand Total (Services):</td>
@@ -1097,13 +1097,16 @@ elif page_selection == "➕ Build New Quotation Module":
             <style>
                 @page {{
                     size: A4;
-                    margin: 5mm 15mm 20mm 15mm;
+                    margin: 15mm 15mm 20mm 15mm;
                     @bottom-right {{
                         content: "Page " counter(page) " of " counter(pages);
                         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                         font-size: 8pt;
                         color: #64748b;
                     }}
+                }}
+                @page :first {{
+                    margin-top: 5mm;
                 }}
                 body {{
                     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
