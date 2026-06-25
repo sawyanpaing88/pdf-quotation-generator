@@ -907,11 +907,9 @@ elif page_selection == "➕ Build New Quotation Module":
     }
     extended_meta_json_str = json.dumps(extended_meta_payload)
     #My test
-    terms_list = terms_and_cond.split('\n')
-
     terms_html = "<br>".join(
-    [f"{i+1}. {term}" for i, term in enumerate(terms_list) if term.strip()]
-    )
+    [f"• {term}" for term in terms_and_cond.split('\n') if term.strip()]
+)
     
     action_c1, action_c2 = st.columns(2)
     if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
