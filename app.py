@@ -907,6 +907,11 @@ elif page_selection == "➕ Build New Quotation Module":
     }
     extended_meta_json_str = json.dumps(extended_meta_payload)
 
+    #My Test
+    terms_html = "<br>".join(
+    [f"&nbsp;&nbsp;&nbsp;&nbsp;• {term}" for term in terms_and_cond.split('\n') if term.strip()]
+)
+
     action_c1, action_c2 = st.columns(2)
     if action_c1.button("💾 Persist Document Configuration (Save Draft)"):
         with get_db() as conn:
@@ -1218,19 +1223,17 @@ elif page_selection == "➕ Build New Quotation Module":
             <div class="clear"></div>
 
           <div class="footer-terms">
-            <strong>Commercial Logistics Terms & Governance Conditions:</strong><br>
+    <strong>Commercial Logistics Terms & Governance Conditions:</strong><br>
 
-            1. Delivery Lead-Time Windows: Equipment delivery windows are anticipated at approximately 
-            <strong>{lead_time_frame}</strong> start from PO issue date.<br>
+    1. Delivery Lead-Time Windows: Equipment delivery windows are anticipated at approximately 
+    <strong>{lead_time_frame}</strong> start from PO issue date.<br>
 
-            2. Explicit Milestone Commitments: All relative monetary settlement routes must maintain strict compliance with: 
-            <strong style="color:red;">{payment_terms_desc}</strong>.<br>
+    2. Explicit Milestone Commitments: All relative monetary settlement routes must maintain strict compliance with: 
+    <strong style="color:red;">{payment_terms_desc}</strong>.<br>
 
-         3. Additional Execution Scope and Framework Matrix Parameters:<br>
-<span style="color:#003366; margin-left:20px;">
-    • {terms_and_cond.replace('\n', '<br>• ')}
-</span>
-        </div>
+    3. Additional Execution Scope and Framework Matrix Parameters:<br>
+    <span style="color:#003366;">{terms_html}</span>
+</div>
 
             <div class="signatory-container">
                 <div class="signatory-box">
