@@ -909,7 +909,7 @@ elif page_selection == "➕ Build New Quotation Module":
               /* Constrained Header to 1.6in */
                 .header-container {{ 
                     text-align: center; 
-                    max-height: 1.5in; 
+                    max-height: 1.6in; 
                     overflow: fixed; 
                     margin-bottom: 10px;
                 }}    
