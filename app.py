@@ -919,7 +919,7 @@ elif page_selection == "➕ Build New Quotation Module":
                 .header-address {{
                     font-size: 8pt;
                     color: #475569;
-                    line-height: 1.4;
+                    line-height: 1.0;
                 }}
                 .company-group-title {{
                     font-weight: bold;
